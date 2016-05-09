@@ -1,0 +1,7 @@
+[package]
+name = "frappe"
+version = "0.1.0"
+authors = ["Tim Detwiler <timdetwiler@gmail.com>"]
+
+[dependencies]
+byteorder = "^0.5"
