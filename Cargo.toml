@@ -5,3 +5,6 @@ authors = ["Tim Detwiler <timdetwiler@gmail.com>"]
 
 [dependencies]
 byteorder = "^0.5"
+
+# Argument Parsing
+getopts = "0.2"
