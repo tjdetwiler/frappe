@@ -4,7 +4,6 @@ use std::ops::Index;
 
 use util::*;
 use error::{ClassResult, ClassError};
-use attr::AttributeInfo;
 
 #[derive(Debug)]
 pub struct ConstantPool {

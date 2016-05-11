@@ -6,11 +6,11 @@ use attr::AttributeInfo;
 
 #[derive(Debug)]
 pub struct MethodInfo {
-    access_flags: u16,
-    name_index: u16,
-    descriptor_index: u16,
-    attributes_count: u16,
-    attribute_info: Vec<AttributeInfo>
+    pub access_flags: u16,
+    pub name_index: u16,
+    pub descriptor_index: u16,
+    pub attributes_count: u16,
+    pub attribute_info: Vec<AttributeInfo>
 }
 
 impl MethodInfo {

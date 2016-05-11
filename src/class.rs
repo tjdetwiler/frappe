@@ -1,9 +1,8 @@
 use std::vec::Vec;
-use std::fmt;
 use std::io;
 
 use util::*;
-use error::{ClassResult, ClassError};
+use error::ClassResult;
 use attr::AttributeInfo;
 use constant_pool::ConstantPool;
 use field::FieldInfo;
@@ -91,6 +90,8 @@ impl ClassFile {
 mod tests {
     use super::*;
     use std::fs::File;
+
+    use constant_pool::ConstantPoolTag;
 
     #[test]
     fn test_load_hello_world_class() {
