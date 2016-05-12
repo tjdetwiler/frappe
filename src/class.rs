@@ -76,7 +76,7 @@ mod tests {
     use super::*;
     use std::fs::File;
 
-    use constant_pool::ConstantPoolTag;
+    use constant_pool::Tag;
 
     #[test]
     fn test_load_hello_world_class() {
@@ -97,35 +97,35 @@ mod tests {
 
         // Constant pool entries
         assert_eq!(
-            ConstantPoolTag::Methodref {
+            Tag::Methodref {
                 class_index: 6,
                 name_and_type_index: 15
             },
             classfile.constant_pool[1]);
         assert_eq!(
-            ConstantPoolTag::Fieldref {
+            Tag::Fieldref {
                 class_index: 16,
                 name_and_type_index: 17
             },
             classfile.constant_pool[2]);
         assert_eq!(
-            ConstantPoolTag::String {
+            Tag::String {
                 string_index: 18
             },
             classfile.constant_pool[3]);
         assert_eq!(
-            ConstantPoolTag::Methodref {
+            Tag::Methodref {
                 class_index: 19,
                 name_and_type_index: 20
             },
             classfile.constant_pool[4]);
         assert_eq!(
-            ConstantPoolTag::Class {
+            Tag::Class {
                 name_index: 21
             },
             classfile.constant_pool[5]);
         assert_eq!(
-            ConstantPoolTag::Class {
+            Tag::Class {
                 name_index: 22
             },
             classfile.constant_pool[6]);
@@ -154,18 +154,18 @@ mod tests {
             "HelloWorld.java",
             &classfile.constant_pool[14]);
         assert_eq!(
-            ConstantPoolTag::NameAndType {
+            Tag::NameAndType {
                 name_index: 7,
                 descriptor_index: 8
             },
             classfile.constant_pool[15]);
         assert_eq!(
-            ConstantPoolTag::Class {
+            Tag::Class {
                 name_index: 23
             },
             classfile.constant_pool[16]);
         assert_eq!(
-            ConstantPoolTag::NameAndType {
+            Tag::NameAndType {
                 name_index: 24,
                 descriptor_index: 25
             },
@@ -174,12 +174,12 @@ mod tests {
             "Hello World!",
             &classfile.constant_pool[18]);
         assert_eq!(
-            ConstantPoolTag::Class {
+            Tag::Class {
                 name_index: 26
             },
             classfile.constant_pool[19]);
         assert_eq!(
-            ConstantPoolTag::NameAndType {
+            Tag::NameAndType {
                 name_index: 27,
                 descriptor_index: 28
             },
@@ -241,8 +241,8 @@ mod tests {
         assert_eq!(1, classfile.attributes.len());
     }
 
-    fn assert_utf8_tag(value: &str, tag: &ConstantPoolTag) {
-        let expected_tag = ConstantPoolTag::Utf8(value.into());
+    fn assert_utf8_tag(value: &str, tag: &Tag) {
+        let expected_tag = Tag::Utf8(value.into());
         assert_eq!(expected_tag, *tag);
     }
 }
