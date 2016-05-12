@@ -1,5 +1,6 @@
 use std::io;
 use std::vec::Vec;
+use std::ops::Deref;
 
 use util::*;
 use attr::Attributes;
@@ -23,6 +24,14 @@ impl Fields {
     }
 }
 
+impl Deref for Fields {
+    type Target = Vec<FieldInfo>;
+
+    fn deref(&self) -> &Vec<FieldInfo> {
+        &self.fields
+    }
+}
+
 #[derive(Debug)]
 pub struct FieldInfo {
     access_flags: u16,
@@ -36,7 +45,7 @@ impl FieldInfo {
         let access_flags = try!(read_u16(rdr));
         let name_index = try!(read_u16(rdr));
         let descriptor_index = try!(read_u16(rdr));
-        let mut attributes: Attributes = try!(Attributes::read(rdr));
+        let attributes: Attributes = try!(Attributes::read(rdr));
         Ok(FieldInfo {
             access_flags: access_flags,
             name_index: name_index,

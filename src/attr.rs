@@ -1,7 +1,8 @@
 use std::io;
 use std::vec::Vec;
-use std::slice::Iter;
+use std::ops::Deref;
 
+use constant_pool::{ConstantPool, ConstantPoolTag};
 use util::*;
 
 pub struct SourceFile {
@@ -42,8 +43,21 @@ impl Attributes {
         })
     }
 
-    pub fn iter(&self) -> Iter<AttributeInfo> {
-        self.attributes.iter()
+    pub fn with_name<'a>(&'a self, name: &str, constant_pool: &ConstantPool) -> Vec<&AttributeInfo> {
+        let expected_tag = ConstantPoolTag::Utf8(name.into());
+        self.attributes
+            .iter()
+            .filter(
+                |&attr| constant_pool[attr.attribute_name_index] == expected_tag)
+            .collect()
+    }
+}
+
+impl Deref for Attributes {
+    type Target = Vec<AttributeInfo>;
+
+    fn deref(&self) -> &Vec<AttributeInfo> {
+        &self.attributes
     }
 }
 
@@ -70,3 +84,4 @@ impl AttributeInfo {
         })
     }
 }
+

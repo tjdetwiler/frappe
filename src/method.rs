@@ -1,5 +1,6 @@
 use std::io;
 use std::vec::Vec;
+use std::ops::Deref;
 
 use util::*;
 use attr::AttributeInfo;
@@ -20,6 +21,14 @@ impl Methods {
         Ok(Methods {
             methods: methods
         })
+    }
+}
+
+impl Deref for Methods {
+    type Target = Vec<MethodInfo>;
+
+    fn deref(&self) -> &Vec<MethodInfo> {
+        &self.methods
     }
 }
 

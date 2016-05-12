@@ -3,10 +3,10 @@ use std::io;
 
 use util::*;
 use error::ClassResult;
-use attr::{Attributes, AttributeInfo};
+use attr::Attributes;
 use constant_pool::ConstantPool;
-use field::{Fields, FieldInfo};
-use method::{Methods, MethodInfo};
+use field::Fields;
+use method::Methods;
 
 pub const ACC_PUBLIC: u16       = 0x0001;
 pub const ACC_PRIVATE: u16      = 0x0002;
@@ -209,13 +209,13 @@ mod tests {
             "(Ljava/lang/String;)V",
             &classfile.constant_pool[28]);
 
-        assert_eq!(0, classfile.interfaces.len());
-        assert_eq!(0, classfile.field_info.len());
+        assert_eq!(0, classfile.fields.len());
+        assert_eq!(0, classfile.fields.len());
 
         // 2 methods
-        assert_eq!(2, classfile.method_info.len());
+        assert_eq!(2, classfile.methods.len());
         // ctor
-        let ctor_info = &classfile.method_info[0];
+        let ctor_info = &classfile.methods[0];
         assert_eq!(
             ACC_PUBLIC,
             ctor_info.access_flags);
@@ -226,7 +226,7 @@ mod tests {
             "()V",
             &classfile.constant_pool[ctor_info.descriptor_index]);
         // main
-        let main_info = &classfile.method_info[1];
+        let main_info = &classfile.methods[1];
         assert_eq!(
             ACC_PUBLIC | ACC_STATIC,
             main_info.access_flags);
@@ -238,7 +238,7 @@ mod tests {
             &classfile.constant_pool[main_info.descriptor_index]);
 
         // 1 attribute
-        assert_eq!(1, classfile.attribute_info.len());
+        assert_eq!(1, classfile.attributes.len());
     }
 
     fn assert_utf8_tag(value: &str, tag: &ConstantPoolTag) {
