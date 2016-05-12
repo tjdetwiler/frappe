@@ -2,7 +2,7 @@ use std::io;
 use std::vec::Vec;
 use std::ops::Deref;
 
-use constant_pool::{ConstantPool, ConstantPoolTag};
+use constant_pool as cp;
 use util::*;
 
 pub struct SourceFile {
@@ -43,8 +43,8 @@ impl Attributes {
         })
     }
 
-    pub fn with_name<'a>(&'a self, name: &str, constant_pool: &ConstantPool) -> Vec<&AttributeInfo> {
-        let expected_tag = ConstantPoolTag::Utf8(name.into());
+    pub fn with_name<'a>(&'a self, name: &str, constant_pool: &cp::ConstantPool) -> Vec<&AttributeInfo> {
+        let expected_tag = cp::Tag::Utf8(name.into());
         self.attributes
             .iter()
             .filter(

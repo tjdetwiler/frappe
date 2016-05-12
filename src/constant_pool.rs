@@ -7,15 +7,15 @@ use error::{ClassResult, ClassError};
 
 #[derive(Debug)]
 pub struct ConstantPool {
-    pool: Vec<ConstantPoolTag>,
+    pool: Vec<Tag>,
 }
 
 impl ConstantPool {
     pub fn read<T: io::Read>(rdr: &mut T) -> ClassResult<ConstantPool> {
         let size = try!(read_u16(rdr));
-        let mut constant_pool : Vec<ConstantPoolTag> = vec![];
+        let mut constant_pool : Vec<Tag> = vec![];
         for _ in 0..(size - 1) {
-            let entry = try!(ConstantPoolTag::read(rdr));
+            let entry = try!(Tag::read(rdr));
             constant_pool.push(entry);
         }
         Ok(ConstantPool {
@@ -29,16 +29,16 @@ impl ConstantPool {
 }
 
 impl Index<u16> for ConstantPool {
-    type Output = ConstantPoolTag;
+    type Output = Tag;
 
-    fn index<'a>(&'a self, index: u16) -> &'a ConstantPoolTag {
+    fn index<'a>(&'a self, index: u16) -> &'a Tag {
         &self.pool[index as usize - 1]
     }
 }
 
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum ConstantPoolTag {
+pub enum Tag {
     Class {
         name_index: u16
     },
@@ -89,8 +89,8 @@ pub enum ConstantPoolTag {
     }
 }
 
-impl ConstantPoolTag {
-    pub fn read<T: io::Read>(rdr: &mut T) -> ClassResult<ConstantPoolTag> {
+impl Tag {
+    pub fn read<T: io::Read>(rdr: &mut T) -> ClassResult<Tag> {
         // https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4
         const CONSTANT_UTF8: u8                 = 1;
         const CONSTANT_INTEGER: u8              = 3;
@@ -117,24 +117,24 @@ impl ConstantPoolTag {
                     bytes.push(byte);
                 }
                 let value = try!(String::from_utf8(bytes));
-                Ok(ConstantPoolTag::Utf8(value))
+                Ok(Tag::Utf8(value))
             }
             CONSTANT_INTEGER => {
                 let bytes = try!(read_u32(rdr));
-                Ok(ConstantPoolTag::Integer {
+                Ok(Tag::Integer {
                     bytes: bytes
                 })
             }
             CONSTANT_FLOAT => {
                 let bytes = try!(read_u32(rdr));
-                Ok(ConstantPoolTag::Float {
+                Ok(Tag::Float {
                     bytes: bytes
                 })
             }
             CONSTANT_LONG => {
                 let high_bytes = try!(read_u32(rdr));
                 let low_bytes = try!(read_u32(rdr));
-                Ok(ConstantPoolTag::Long {
+                Ok(Tag::Long {
                     high_bytes: high_bytes,
                     low_bytes: low_bytes
                 })
@@ -142,27 +142,27 @@ impl ConstantPoolTag {
             CONSTANT_DOUBLE => {
                 let high_bytes = try!(read_u32(rdr));
                 let low_bytes = try!(read_u32(rdr));
-                Ok(ConstantPoolTag::Double {
+                Ok(Tag::Double {
                     high_bytes: high_bytes,
                     low_bytes: low_bytes
                 })
             }
             CONSTANT_CLASS => {
                 let name_index = try!(read_u16(rdr));
-                Ok(ConstantPoolTag::Class {
+                Ok(Tag::Class {
                     name_index: name_index
                 })
             }
             CONSTANT_STRING => {
                 let string_index = try!(read_u16(rdr));
-                Ok(ConstantPoolTag::String {
+                Ok(Tag::String {
                     string_index: string_index
                 })
             }
             CONSTANT_FIELDREF => {
                 let class_index = try!(read_u16(rdr));
                 let name_and_type_index = try!(read_u16(rdr));
-                Ok(ConstantPoolTag::Fieldref {
+                Ok(Tag::Fieldref {
                     class_index: class_index,
                     name_and_type_index: name_and_type_index
                 })
@@ -170,7 +170,7 @@ impl ConstantPoolTag {
             CONSTANT_METHODREF => {
                 let class_index = try!(read_u16(rdr));
                 let name_and_type_index = try!(read_u16(rdr));
-                Ok(ConstantPoolTag::Methodref {
+                Ok(Tag::Methodref {
                     class_index: class_index,
                     name_and_type_index: name_and_type_index
                 })
@@ -178,7 +178,7 @@ impl ConstantPoolTag {
             CONSTANT_INTERFACE_METHODREF => {
                 let class_index = try!(read_u16(rdr));
                 let name_and_type_index = try!(read_u16(rdr));
-                Ok(ConstantPoolTag::InterfaceMethodref {
+                Ok(Tag::InterfaceMethodref {
                     class_index: class_index,
                     name_and_type_index: name_and_type_index
                 })
@@ -186,7 +186,7 @@ impl ConstantPoolTag {
             CONSTANT_NAME_AND_TYPE => {
                 let name_index = try!(read_u16(rdr));
                 let descriptor_index = try!(read_u16(rdr));
-                Ok(ConstantPoolTag::NameAndType {
+                Ok(Tag::NameAndType {
                     name_index: name_index,
                     descriptor_index: descriptor_index
                 })
@@ -194,21 +194,21 @@ impl ConstantPoolTag {
             CONSTANT_METHOD_HANDLE => {
                 let reference_kind = try!(read_u8(rdr));
                 let reference_index = try!(read_u16(rdr));
-                Ok(ConstantPoolTag::MethodHandle {
+                Ok(Tag::MethodHandle {
                     reference_kind: reference_kind,
                     reference_index: reference_index
                 })
             }
             CONSTANT_METHOD_TYPE => {
                 let descriptor_index = try!(read_u16(rdr));
-                Ok(ConstantPoolTag::MethodType {
+                Ok(Tag::MethodType {
                     descriptor_index: descriptor_index
                 })
             }
             CONSTANT_INVOKE_DYNAMIC => {
                 let bootstrap_method_attr_index = try!(read_u16(rdr));
                 let name_and_type_index = try!(read_u16(rdr));
-                Ok(ConstantPoolTag::InvokeDynamic {
+                Ok(Tag::InvokeDynamic {
                     bootstrap_method_attr_index: bootstrap_method_attr_index,
                     name_and_type_index: name_and_type_index
                 })

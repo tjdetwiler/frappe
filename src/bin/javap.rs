@@ -6,7 +6,7 @@ use std::fs::File;
 
 use getopts::Options;
 use frappe::class::ClassFile;
-use frappe::constant_pool::ConstantPoolTag;
+use frappe::constant_pool as cp;
 
 
 fn main() {
@@ -30,7 +30,7 @@ fn main() {
 
 
     for attribute in class.attributes.with_name("SourceFile", &class.constant_pool) {
-        if let ConstantPoolTag::Utf8(ref attribute_name) = class.constant_pool[attribute.attribute_name_index] {
+        if let cp::Tag::Utf8(ref attribute_name) = class.constant_pool[attribute.attribute_name_index] {
             println!("Compiled from \"{}\"", attribute_name);
         }
     }
