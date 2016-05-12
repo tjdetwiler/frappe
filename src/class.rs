@@ -3,10 +3,10 @@ use std::io;
 
 use util::*;
 use error::ClassResult;
-use attr::AttributeInfo;
+use attr::{Attributes, AttributeInfo};
 use constant_pool::ConstantPool;
-use field::FieldInfo;
-use method::MethodInfo;
+use field::{Fields, FieldInfo};
+use method::{Methods, MethodInfo};
 
 pub const ACC_PUBLIC: u16       = 0x0001;
 pub const ACC_PRIVATE: u16      = 0x0002;
@@ -32,9 +32,9 @@ pub struct ClassFile {
     pub this_class: u16,
     pub super_class: u16,
     pub interfaces: Vec<u16>,
-    pub field_info: Vec<FieldInfo>,
-    pub method_info: Vec<MethodInfo>,
-    pub attribute_info: Vec<AttributeInfo>
+    pub fields: Fields,
+    pub methods: Methods,
+    pub attributes: Attributes
 }
 
 impl ClassFile {
@@ -52,24 +52,9 @@ impl ClassFile {
             let entry = try!(read_u16(rdr));
             interfaces.push(entry);
         }
-        let fields_count = try!(read_u16(rdr));
-        let mut field_info: Vec<FieldInfo> = vec![];
-        for _ in 0..fields_count {
-            let entry = try!(FieldInfo::read(rdr));
-            field_info.push(entry);
-        }
-        let methods_count = try!(read_u16(rdr));
-        let mut method_info: Vec<MethodInfo> = vec![];
-        for _ in 0..methods_count {
-            let entry = try!(MethodInfo::read(rdr));
-            method_info.push(entry);
-        }
-        let attributes_count = try!(read_u16(rdr));
-        let mut attribute_info: Vec<AttributeInfo> = vec![];
-        for _ in 0..attributes_count {
-            let entry = try!(AttributeInfo::read(rdr));
-            attribute_info.push(entry);
-        }
+        let fields = try!(Fields::read(rdr));
+        let methods = try!(Methods::read(rdr));
+        let attributes = try!(Attributes::read(rdr));
         Ok(ClassFile {
             magic: magic,
             minor_version: minor_version,
@@ -79,9 +64,9 @@ impl ClassFile {
             this_class: this_class,
             super_class: super_class,
             interfaces: interfaces,
-            field_info: field_info,
-            method_info: method_info,
-            attribute_info: attribute_info
+            fields: fields,
+            methods: methods,
+            attributes: attributes
         })
     }
 }

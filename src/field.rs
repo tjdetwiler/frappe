@@ -2,15 +2,33 @@ use std::io;
 use std::vec::Vec;
 
 use util::*;
-use attr::AttributeInfo;
+use attr::Attributes;
+
+#[derive(Debug)]
+pub struct Fields {
+    fields: Vec<FieldInfo>
+}
+
+impl Fields {
+    pub fn read<T: io::Read>(rdr: &mut T) -> io::Result<Fields> {
+        let fields_count = try!(read_u16(rdr));
+        let mut fields: Vec<FieldInfo> = vec![];
+        for _ in 0..fields_count {
+            let entry = try!(FieldInfo::read(rdr));
+            fields.push(entry);
+        }
+        Ok(Fields {
+            fields: fields
+        })
+    }
+}
 
 #[derive(Debug)]
 pub struct FieldInfo {
     access_flags: u16,
     name_index: u16,
     descriptor_index: u16,
-    attributes_count: u16,
-    attribute_info: Vec<AttributeInfo>
+    attributes: Attributes
 }
 
 impl FieldInfo {
@@ -18,18 +36,12 @@ impl FieldInfo {
         let access_flags = try!(read_u16(rdr));
         let name_index = try!(read_u16(rdr));
         let descriptor_index = try!(read_u16(rdr));
-        let attributes_count = try!(read_u16(rdr));
-        let mut attribute_info: Vec<AttributeInfo> = vec![];
-        for _ in 0..attributes_count {
-            let attribute = try!(AttributeInfo::read(rdr));
-            attribute_info.push(attribute);
-        }
+        let mut attributes: Attributes = try!(Attributes::read(rdr));
         Ok(FieldInfo {
             access_flags: access_flags,
             name_index: name_index,
             descriptor_index: descriptor_index,
-            attributes_count: attributes_count,
-            attribute_info: attribute_info
+            attributes: attributes
         })
     }
 }

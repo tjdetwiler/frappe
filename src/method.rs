@@ -5,6 +5,25 @@ use util::*;
 use attr::AttributeInfo;
 
 #[derive(Debug)]
+pub struct Methods {
+    methods: Vec<MethodInfo>
+}
+
+impl Methods {
+    pub fn read<T: io::Read>(rdr: &mut T) -> io::Result<Methods> {
+        let methods_count = try!(read_u16(rdr));
+        let mut methods: Vec<MethodInfo> = vec![];
+        for _ in 0..methods_count {
+            let entry = try!(MethodInfo::read(rdr));
+            methods.push(entry);
+        }
+        Ok(Methods {
+            methods: methods
+        })
+    }
+}
+
+#[derive(Debug)]
 pub struct MethodInfo {
     pub access_flags: u16,
     pub name_index: u16,
