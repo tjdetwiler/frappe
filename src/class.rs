@@ -9,17 +9,12 @@ use field::Fields;
 use method::Methods;
 
 pub const ACC_PUBLIC: u16       = 0x0001;
-pub const ACC_PRIVATE: u16      = 0x0002;
-pub const ACC_PROTECTED: u16    = 0x0004;
-pub const ACC_STATIC: u16       = 0x0008;
 pub const ACC_FINAL: u16        = 0x0010;
 pub const ACC_SUPER: u16        = 0x0020;
-pub const ACC_VOLATILE: u16     = 0x0040;
-pub const ACC_TRANSIENT: u16    = 0x0080;
 pub const ACC_INTERFACE: u16    = 0x0200;
 pub const ACC_ABSTRACT: u16     = 0x0400;
 pub const ACC_SYNTHETIC: u16    = 0x1000;
-pub const ACC_ANNOTATION: u16   = 0x1000;
+pub const ACC_ANNOTATION: u16   = 0x2000;
 pub const ACC_ENUM: u16         = 0x4000;
 
 #[derive(Debug)]
@@ -68,6 +63,38 @@ impl ClassFile {
             methods: methods,
             attributes: attributes
         })
+    }
+
+    pub fn is_public(&self) -> bool {
+        (self.access_flags & ACC_PUBLIC) != 0
+    }
+
+    pub fn is_final(&self) -> bool {
+        (self.access_flags & ACC_FINAL) != 0
+    }
+
+    pub fn is_super(&self) -> bool {
+        (self.access_flags & ACC_SUPER) != 0
+    }
+
+    pub fn is_interface(&self) -> bool {
+        (self.access_flags & ACC_INTERFACE) != 0
+    }
+
+    pub fn is_abstract(&self) -> bool {
+        (self.access_flags & ACC_ABSTRACT) != 0
+    }
+
+    pub fn is_synthetic(&self) -> bool {
+        (self.access_flags & ACC_SYNTHETIC) != 0
+    }
+
+    pub fn is_annotation(&self) -> bool {
+        (self.access_flags & ACC_ANNOTATION) != 0
+    }
+
+    pub fn is_enum(&self) -> bool {
+        (self.access_flags & ACC_ENUM) != 0
     }
 }
 
@@ -216,9 +243,8 @@ mod tests {
         assert_eq!(2, classfile.methods.len());
         // ctor
         let ctor_info = &classfile.methods[0];
-        assert_eq!(
-            ACC_PUBLIC,
-            ctor_info.access_flags);
+        assert!(ctor_info.is_public());
+        assert!(!ctor_info.is_static());
         assert_utf8_tag(
             "<init>",
             &classfile.constant_pool[ctor_info.name_index]);
@@ -227,9 +253,8 @@ mod tests {
             &classfile.constant_pool[ctor_info.descriptor_index]);
         // main
         let main_info = &classfile.methods[1];
-        assert_eq!(
-            ACC_PUBLIC | ACC_STATIC,
-            main_info.access_flags);
+        assert!(main_info.is_static());
+        assert!(main_info.is_public());
         assert_utf8_tag(
             "main",
             &classfile.constant_pool[main_info.name_index]);

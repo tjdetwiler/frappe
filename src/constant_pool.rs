@@ -26,6 +26,10 @@ impl ConstantPool {
     pub fn len(&self) -> u16 {
         self.pool.len() as u16 + 1
     }
+
+    pub fn get_string(&self, index: u16) -> Option<&String> {
+        self[index].as_utf8()
+    }
 }
 
 impl Index<u16> for ConstantPool {
