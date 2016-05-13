@@ -9,7 +9,7 @@ use std::io;
 pub enum ClassError {
     IOError,
     MalformedUtf8String,
-    InvalidConstantPoolTag(u8)
+    InvalidConstantPoolTag(u8),
 }
 
 impl fmt::Display for ClassError {

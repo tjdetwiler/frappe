@@ -4,6 +4,8 @@ use std::ops::Deref;
 
 use util::*;
 use attr::AttributeInfo;
+use class::ClassFile;
+use constant_pool as cp;
 
 #[derive(Debug)]
 pub struct Methods {
@@ -11,11 +13,11 @@ pub struct Methods {
 }
 
 impl Methods {
-    pub fn read<T: io::Read>(rdr: &mut T) -> io::Result<Methods> {
+    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> io::Result<Methods> {
         let methods_count = try!(read_u16(rdr));
         let mut methods: Vec<MethodInfo> = vec![];
         for _ in 0..methods_count {
-            let entry = try!(MethodInfo::read(rdr));
+            let entry = try!(MethodInfo::read(rdr, constant_pool));
             methods.push(entry);
         }
         Ok(Methods {
@@ -42,14 +44,14 @@ pub struct MethodInfo {
 }
 
 impl MethodInfo {
-    pub fn read<T: io::Read>(rdr: &mut T) -> io::Result<MethodInfo> {
+    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> io::Result<MethodInfo> {
         let access_flags = try!(read_u16(rdr));
         let name_index = try!(read_u16(rdr));
         let descriptor_index = try!(read_u16(rdr));
         let attributes_count = try!(read_u16(rdr));
         let mut attribute_info: Vec<AttributeInfo> = vec![];
-        for _ in 0..attributes_count {
-            let attribute = try!(AttributeInfo::read(rdr));
+        for i in 0..attributes_count {
+            let attribute = try!(AttributeInfo::read(rdr, constant_pool));
             attribute_info.push(attribute);
         }
         Ok(MethodInfo {

@@ -4,6 +4,7 @@ use std::ops::Deref;
 
 use util::*;
 use attr::Attributes;
+use constant_pool as cp;
 
 #[derive(Debug)]
 pub struct Fields {
@@ -11,11 +12,11 @@ pub struct Fields {
 }
 
 impl Fields {
-    pub fn read<T: io::Read>(rdr: &mut T) -> io::Result<Fields> {
+    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> io::Result<Fields> {
         let fields_count = try!(read_u16(rdr));
         let mut fields: Vec<FieldInfo> = vec![];
         for _ in 0..fields_count {
-            let entry = try!(FieldInfo::read(rdr));
+            let entry = try!(FieldInfo::read(rdr, constant_pool));
             fields.push(entry);
         }
         Ok(Fields {
@@ -41,11 +42,11 @@ pub struct FieldInfo {
 }
 
 impl FieldInfo {
-    pub fn read<T: io::Read>(rdr: &mut T) -> io::Result<FieldInfo> {
+    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> io::Result<FieldInfo> {
         let access_flags = try!(read_u16(rdr));
         let name_index = try!(read_u16(rdr));
         let descriptor_index = try!(read_u16(rdr));
-        let attributes: Attributes = try!(Attributes::read(rdr));
+        let attributes: Attributes = try!(Attributes::read(rdr, constant_pool));
         Ok(FieldInfo {
             access_flags: access_flags,
             name_index: name_index,

@@ -52,9 +52,9 @@ impl ClassFile {
             let entry = try!(read_u16(rdr));
             interfaces.push(entry);
         }
-        let fields = try!(Fields::read(rdr));
-        let methods = try!(Methods::read(rdr));
-        let attributes = try!(Attributes::read(rdr));
+        let fields = try!(Fields::read(rdr, &constant_pool));
+        let methods = try!(Methods::read(rdr, &constant_pool));
+        let attributes = try!(Attributes::read(rdr, &constant_pool));
         Ok(ClassFile {
             magic: magic,
             minor_version: minor_version,

@@ -7,6 +7,7 @@ use std::fs::File;
 use getopts::Options;
 use frappe::class::ClassFile;
 use frappe::constant_pool as cp;
+use frappe::attr;
 
 
 fn main() {
@@ -28,10 +29,10 @@ fn main() {
     let mut class_file = File::open(class_filename).unwrap();
     let class = ClassFile::read(&mut class_file).unwrap();
 
-
-    for attribute in class.attributes.with_name("SourceFile", &class.constant_pool) {
-        if let cp::Tag::Utf8(ref attribute_name) = class.constant_pool[attribute.attribute_name_index] {
-            println!("Compiled from \"{}\"", attribute_name);
+    for attribute in class.attributes.iter() {
+        if let attr::AttributeInfo::SourceFile(ref sourcefile_info) = *attribute {
+            let source_file = &class.constant_pool[sourcefile_info.sourcefile_index];
+            println!("Compiled from \"{}\"", source_file.as_utf8().unwrap());
         }
     }
     println!("{:?}", class);

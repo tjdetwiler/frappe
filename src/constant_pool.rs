@@ -216,5 +216,13 @@ impl Tag {
             _ => Err(ClassError::InvalidConstantPoolTag(tag))
         }
     }
+
+    pub fn as_utf8(&self) -> Option<&String> {
+        match *self {
+            Tag::Utf8(ref value) => { Some(value) }
+            _ => None
+        }
+    }
+
 }
 
