@@ -4,7 +4,6 @@ use std::ops::Deref;
 
 use util::*;
 use attr::AttributeInfo;
-use class::ClassFile;
 use constant_pool as cp;
 
 #[derive(Debug)]
@@ -50,7 +49,7 @@ impl MethodInfo {
         let descriptor_index = try!(read_u16(rdr));
         let attributes_count = try!(read_u16(rdr));
         let mut attribute_info: Vec<AttributeInfo> = vec![];
-        for i in 0..attributes_count {
+        for _ in 0..attributes_count {
             let attribute = try!(AttributeInfo::read(rdr, constant_pool));
             attribute_info.push(attribute);
         }
