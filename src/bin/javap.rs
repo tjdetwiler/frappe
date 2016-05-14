@@ -7,6 +7,7 @@ use frappe::attr;
 use frappe::constant_pool as cp;
 
 fn main() {
+    let verbose = true;
     let classname = "io.hcf.frappe.HelloWorld";
     let mut class_filename = classname.replace('.', "/");
     class_filename.push_str(".class");
@@ -35,6 +36,15 @@ fn main() {
         let class_name = class.constant_pool[name_index].as_utf8().unwrap();
         print!("{}", class_name.replace("/", "."));
         println!(" {{");
+        if verbose {
+            println!("  minor version: {}", class.minor_version);
+            println!("  major version: {}", class.minor_version);
+            println!("  flags: TODO");
+            println!("Constant pool:");
+            for (i, tag) in class.constant_pool.iter().enumerate() {
+                println!("  #{} = {:?}", i+1, tag);
+            }
+        }
         for method in class.methods.iter() {
             print!("  ");
             if method.is_public() {

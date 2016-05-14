@@ -1,6 +1,6 @@
 use std::io;
 use std::vec::Vec;
-use std::ops::Index;
+use std::ops::{Deref, Index};
 
 use util::*;
 use error::{ClassResult, ClassError};
@@ -40,6 +40,13 @@ impl Index<u16> for ConstantPool {
     }
 }
 
+impl Deref for ConstantPool {
+    type Target = Vec<Tag>;
+
+    fn deref(&self) -> &Vec<Tag> {
+        &self.pool
+    }
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Tag {
