@@ -3,7 +3,7 @@ use std::vec::Vec;
 use std::ops::{Deref, Index};
 
 use util::*;
-use error::{ClassResult, ClassError};
+use classfile::error::{ClassResult, ClassError};
 
 #[derive(Debug)]
 pub struct ConstantPool {

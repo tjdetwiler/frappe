@@ -2,7 +2,7 @@ use std::io;
 use std::vec::Vec;
 use std::ops::Deref;
 
-use constant_pool as cp;
+use classfile::constant_pool as cp;
 use util::*;
 
 #[derive(Debug)]

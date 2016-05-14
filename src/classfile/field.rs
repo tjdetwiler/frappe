@@ -3,8 +3,8 @@ use std::vec::Vec;
 use std::ops::Deref;
 
 use util::*;
-use attr::Attributes;
-use constant_pool as cp;
+use classfile::attr::Attributes;
+use classfile::constant_pool as cp;
 
 const ACC_PUBLIC: u16 = 0x0001;
 const ACC_PRIVATE: u16 = 0x0002;

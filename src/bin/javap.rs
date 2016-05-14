@@ -2,9 +2,9 @@ extern crate frappe;
 
 use std::fs::File;
 
-use frappe::class::ClassFile;
-use frappe::attr;
-use frappe::constant_pool as cp;
+use frappe::classfile::ClassFile;
+use frappe::classfile::attr;
+use frappe::classfile::constant_pool as cp;
 
 fn main() {
     let verbose = true;

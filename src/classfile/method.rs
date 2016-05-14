@@ -3,8 +3,8 @@ use std::vec::Vec;
 use std::ops::Deref;
 
 use util::*;
-use attr::AttributeInfo;
-use constant_pool as cp;
+use classfile::attr::AttributeInfo;
+use classfile::constant_pool as cp;
 
 #[derive(Debug)]
 pub struct Methods {

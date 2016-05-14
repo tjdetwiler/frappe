@@ -1,12 +1,19 @@
+pub mod method;
+pub mod field;
+pub mod constant_pool;
+pub mod attr;
+pub mod error;
+
 use std::vec::Vec;
 use std::io;
 
 use util::*;
-use error::ClassResult;
-use attr::Attributes;
-use constant_pool::ConstantPool;
-use field::Fields;
-use method::Methods;
+use classfile::error::ClassResult;
+use classfile::attr::Attributes;
+use classfile::constant_pool::ConstantPool;
+use classfile::field::Fields;
+use classfile::method::Methods;
+
 
 const ACC_PUBLIC: u16       = 0x0001;
 const ACC_FINAL: u16        = 0x0010;
@@ -116,7 +123,7 @@ mod tests {
     use super::*;
     use std::fs::File;
 
-    use constant_pool::Tag;
+    use classfile::constant_pool::Tag;
 
     #[test]
     fn test_load_hello_world_class() {
