@@ -3,7 +3,7 @@ use std::vec::Vec;
 use std::ops::{Deref, Index};
 
 use util::*;
-use classfile::error::{ClassResult, ClassError};
+use classfile::error::{Result, Error};
 
 #[derive(Debug)]
 pub struct ConstantPool {
@@ -11,7 +11,7 @@ pub struct ConstantPool {
 }
 
 impl ConstantPool {
-    pub fn read<T: io::Read>(rdr: &mut T) -> ClassResult<ConstantPool> {
+    pub fn read<T: io::Read>(rdr: &mut T) -> Result<ConstantPool> {
         let size = try!(read_u16(rdr));
         let mut constant_pool : Vec<Tag> = vec![];
         for _ in 0..(size - 1) {
@@ -101,7 +101,7 @@ pub enum Tag {
 }
 
 impl Tag {
-    pub fn read<T: io::Read>(rdr: &mut T) -> ClassResult<Tag> {
+    pub fn read<T: io::Read>(rdr: &mut T) -> Result<Tag> {
         // https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.4
         const CONSTANT_UTF8: u8                 = 1;
         const CONSTANT_INTEGER: u8              = 3;
@@ -224,7 +224,7 @@ impl Tag {
                     name_and_type_index: name_and_type_index
                 })
             }
-            _ => Err(ClassError::InvalidConstantPoolTag(tag))
+            _ => Err(Error::InvalidConstantPoolTag(tag))
         }
     }
 

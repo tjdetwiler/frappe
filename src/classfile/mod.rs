@@ -8,7 +8,7 @@ use std::vec::Vec;
 use std::io;
 
 use util::*;
-use classfile::error::ClassResult;
+use classfile::error::Result;
 use classfile::attr::Attributes;
 use classfile::constant_pool::ConstantPool;
 use classfile::field::Fields;
@@ -85,7 +85,7 @@ pub struct ClassFile {
 }
 
 impl ClassFile {
-    pub fn read<T: io::Read>(rdr: &mut T) -> ClassResult<ClassFile> {
+    pub fn read<T: io::Read>(rdr: &mut T) -> Result<ClassFile> {
         let magic = try!(read_u32(rdr));
         let minor_version = try!(read_u16(rdr));
         let major_version = try!(read_u16(rdr));

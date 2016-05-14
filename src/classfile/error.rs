@@ -6,19 +6,19 @@ use std::fmt;
 use std::io;
 
 #[derive(Debug)]
-pub enum ClassError {
+pub enum Error {
     IOError,
     MalformedUtf8String,
     InvalidConstantPoolTag(u8),
 }
 
-impl fmt::Display for ClassError {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "BOOM")
     }
 }
 
-impl error::Error for ClassError {
+impl error::Error for Error {
     fn description(&self) -> &str {
         "BOOM"
     }
@@ -28,16 +28,16 @@ impl error::Error for ClassError {
     }
 }
 
-impl From<io::Error> for ClassError {
-    fn from(_: io::Error) -> ClassError {
-        ClassError::IOError
+impl From<io::Error> for Error {
+    fn from(_: io::Error) -> Error {
+        Error::IOError
     }
 }
 
-impl From<FromUtf8Error> for ClassError {
-    fn from(_: FromUtf8Error) -> ClassError {
-        ClassError::MalformedUtf8String
+impl From<FromUtf8Error> for Error {
+    fn from(_: FromUtf8Error) -> Error {
+        Error::MalformedUtf8String
     }
 }
 
-pub type ClassResult<T> = result::Result<T, ClassError>;
+pub type Result<T> = result::Result<T, Error>;
