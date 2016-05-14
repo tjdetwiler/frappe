@@ -8,61 +8,25 @@ use constant_pool::ConstantPool;
 use field::Fields;
 use method::Methods;
 
-pub const ACC_PUBLIC: u16       = 0x0001;
-pub const ACC_FINAL: u16        = 0x0010;
-pub const ACC_SUPER: u16        = 0x0020;
-pub const ACC_INTERFACE: u16    = 0x0200;
-pub const ACC_ABSTRACT: u16     = 0x0400;
-pub const ACC_SYNTHETIC: u16    = 0x1000;
-pub const ACC_ANNOTATION: u16   = 0x2000;
-pub const ACC_ENUM: u16         = 0x4000;
+const ACC_PUBLIC: u16       = 0x0001;
+const ACC_FINAL: u16        = 0x0010;
+const ACC_SUPER: u16        = 0x0020;
+const ACC_INTERFACE: u16    = 0x0200;
+const ACC_ABSTRACT: u16     = 0x0400;
+const ACC_SYNTHETIC: u16    = 0x1000;
+const ACC_ANNOTATION: u16   = 0x2000;
+const ACC_ENUM: u16         = 0x4000;
 
-#[derive(Debug)]
-pub struct ClassFile {
-    pub magic: u32,
-    pub minor_version: u16,
-    pub major_version: u16,
-    pub constant_pool: ConstantPool,
-    pub access_flags: u16,
-    pub this_class: u16,
-    pub super_class: u16,
-    pub interfaces: Vec<u16>,
-    pub fields: Fields,
-    pub methods: Methods,
-    pub attributes: Attributes
+#[derive(Debug, Eq, PartialEq)]
+pub struct ClassAccessFlags {
+    access_flags: u16
 }
 
-impl ClassFile {
-    pub fn read<T: io::Read>(rdr: &mut T) -> ClassResult<ClassFile> {
-        let magic = try!(read_u32(rdr));
-        let minor_version = try!(read_u16(rdr));
-        let major_version = try!(read_u16(rdr));
-        let constant_pool = try!(ConstantPool::read(rdr));
-        let access_flags = try!(read_u16(rdr));
-        let this_class = try!(read_u16(rdr));
-        let super_class = try!(read_u16(rdr));
-        let interfaces_count = try!(read_u16(rdr));
-        let mut interfaces: Vec<u16> = vec![];
-        for _ in 0..interfaces_count {
-            let entry = try!(read_u16(rdr));
-            interfaces.push(entry);
+impl ClassAccessFlags {
+    fn new(access_flags: u16) -> ClassAccessFlags {
+        ClassAccessFlags {
+            access_flags: access_flags
         }
-        let fields = try!(Fields::read(rdr, &constant_pool));
-        let methods = try!(Methods::read(rdr, &constant_pool));
-        let attributes = try!(Attributes::read(rdr, &constant_pool));
-        Ok(ClassFile {
-            magic: magic,
-            minor_version: minor_version,
-            major_version: major_version,
-            constant_pool: constant_pool,
-            access_flags: access_flags,
-            this_class: this_class,
-            super_class: super_class,
-            interfaces: interfaces,
-            fields: fields,
-            methods: methods,
-            attributes: attributes
-        })
     }
 
     pub fn is_public(&self) -> bool {
@@ -98,6 +62,55 @@ impl ClassFile {
     }
 }
 
+#[derive(Debug)]
+pub struct ClassFile {
+    pub magic: u32,
+    pub minor_version: u16,
+    pub major_version: u16,
+    pub constant_pool: ConstantPool,
+    pub access_flags: ClassAccessFlags,
+    pub this_class: u16,
+    pub super_class: u16,
+    pub interfaces: Vec<u16>,
+    pub fields: Fields,
+    pub methods: Methods,
+    pub attributes: Attributes
+}
+
+impl ClassFile {
+    pub fn read<T: io::Read>(rdr: &mut T) -> ClassResult<ClassFile> {
+        let magic = try!(read_u32(rdr));
+        let minor_version = try!(read_u16(rdr));
+        let major_version = try!(read_u16(rdr));
+        let constant_pool = try!(ConstantPool::read(rdr));
+        let access_flags = try!(read_u16(rdr));
+        let this_class = try!(read_u16(rdr));
+        let super_class = try!(read_u16(rdr));
+        let interfaces_count = try!(read_u16(rdr));
+        let mut interfaces: Vec<u16> = vec![];
+        for _ in 0..interfaces_count {
+            let entry = try!(read_u16(rdr));
+            interfaces.push(entry);
+        }
+        let fields = try!(Fields::read(rdr, &constant_pool));
+        let methods = try!(Methods::read(rdr, &constant_pool));
+        let attributes = try!(Attributes::read(rdr, &constant_pool));
+        Ok(ClassFile {
+            magic: magic,
+            minor_version: minor_version,
+            major_version: major_version,
+            constant_pool: constant_pool,
+            access_flags: ClassAccessFlags::new(access_flags),
+            this_class: this_class,
+            super_class: super_class,
+            interfaces: interfaces,
+            fields: fields,
+            methods: methods,
+            attributes: attributes
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,9 +131,8 @@ mod tests {
         assert_eq!(52, classfile.major_version);
         assert_eq!(0, classfile.minor_version);
         assert_eq!(29, classfile.constant_pool.len());
-        assert_eq!(
-            ACC_PUBLIC | ACC_SUPER,
-            classfile.access_flags);
+        assert!(classfile.access_flags.is_public());
+        assert!(classfile.access_flags.is_super());
 
         // Constant pool entries
         assert_eq!(
@@ -243,8 +255,8 @@ mod tests {
         assert_eq!(2, classfile.methods.len());
         // ctor
         let ctor_info = &classfile.methods[0];
-        assert!(ctor_info.is_public());
-        assert!(!ctor_info.is_static());
+        assert!(ctor_info.access_flags.is_public());
+        assert!(!ctor_info.access_flags.is_static());
         assert_utf8_tag(
             "<init>",
             &classfile.constant_pool[ctor_info.name_index]);
@@ -253,8 +265,8 @@ mod tests {
             &classfile.constant_pool[ctor_info.descriptor_index]);
         // main
         let main_info = &classfile.methods[1];
-        assert!(main_info.is_static());
-        assert!(main_info.is_public());
+        assert!(main_info.access_flags.is_static());
+        assert!(main_info.access_flags.is_public());
         assert_utf8_tag(
             "main",
             &classfile.constant_pool[main_info.name_index]);

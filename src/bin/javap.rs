@@ -22,12 +22,12 @@ fn main() {
     }
     let this_class = &class.constant_pool[class.this_class];
     if let cp::Tag::Class{name_index} = *this_class {
-        if class.is_public() {
+        if class.access_flags.is_public() {
             print!("public ");
         }
-        if class.is_interface() {
+        if class.access_flags.is_interface() {
             print!("interface");
-        } else if class.is_annotation() {
+        } else if class.access_flags.is_annotation() {
             print!("@interface");
         } else {
             print!("class");
@@ -47,16 +47,16 @@ fn main() {
         }
         for method in class.methods.iter() {
             print!("  ");
-            if method.is_public() {
+            if method.access_flags.is_public() {
                 print!("public ");
-            } else if method.is_private() {
+            } else if method.access_flags.is_private() {
                 print!("private ");
-            } else if method.is_protected() {
+            } else if method.access_flags.is_protected() {
                 print!("protected ");
             } else {
                 print!("/* package */ ");
             }
-            if method.is_static() {
+            if method.access_flags.is_static() {
                 print!("static ");
             }
             let method_name = class.constant_pool.get_string(method.name_index);
