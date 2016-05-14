@@ -30,6 +30,14 @@ impl ConstantPool {
     pub fn get_string(&self, index: u16) -> Option<&String> {
         self[index].as_utf8()
     }
+
+    pub fn get_class(&self, index: u16) -> Option<&ClassTag> {
+        if let Tag::Class(ref class_tag) = self[index] {
+            Some(class_tag)
+        } else {
+            None
+        }
+    }
 }
 
 impl Index<u16> for ConstantPool {
@@ -49,25 +57,40 @@ impl Deref for ConstantPool {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct ClassTag {
+    pub name_index: u16
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct FieldrefTag {
+    pub class_index: u16,
+    pub name_and_type_index: u16
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct MethodrefTag {
+    pub class_index: u16,
+    pub name_and_type_index: u16
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct InterfaceMethodrefTag {
+    pub class_index: u16,
+    pub name_and_type_index: u16
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct StringTag {
+    pub string_index: u16
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Tag {
-    Class {
-        name_index: u16
-    },
-    Fieldref {
-        class_index: u16,
-        name_and_type_index: u16
-    },
-    Methodref {
-        class_index: u16,
-        name_and_type_index: u16
-    },
-    InterfaceMethodref {
-        class_index: u16,
-        name_and_type_index: u16
-    },
-    String {
-        string_index: u16
-    },
+    Class(ClassTag),
+    Fieldref(FieldrefTag),
+    Methodref(MethodrefTag),
+    InterfaceMethodref(InterfaceMethodrefTag),
+    String(StringTag),
     Integer {
         bytes: u32
     },
@@ -160,39 +183,39 @@ impl Tag {
             }
             CONSTANT_CLASS => {
                 let name_index = try!(read_u16(rdr));
-                Ok(Tag::Class {
+                Ok(Tag::Class(ClassTag {
                     name_index: name_index
-                })
+                }))
             }
             CONSTANT_STRING => {
                 let string_index = try!(read_u16(rdr));
-                Ok(Tag::String {
+                Ok(Tag::String(StringTag {
                     string_index: string_index
-                })
+                }))
             }
             CONSTANT_FIELDREF => {
                 let class_index = try!(read_u16(rdr));
                 let name_and_type_index = try!(read_u16(rdr));
-                Ok(Tag::Fieldref {
+                Ok(Tag::Fieldref(FieldrefTag {
                     class_index: class_index,
                     name_and_type_index: name_and_type_index
-                })
+                }))
             }
             CONSTANT_METHODREF => {
                 let class_index = try!(read_u16(rdr));
                 let name_and_type_index = try!(read_u16(rdr));
-                Ok(Tag::Methodref {
+                Ok(Tag::Methodref(MethodrefTag {
                     class_index: class_index,
                     name_and_type_index: name_and_type_index
-                })
+                }))
             }
             CONSTANT_INTERFACE_METHODREF => {
                 let class_index = try!(read_u16(rdr));
                 let name_and_type_index = try!(read_u16(rdr));
-                Ok(Tag::InterfaceMethodref {
+                Ok(Tag::InterfaceMethodref(InterfaceMethodrefTag {
                     class_index: class_index,
                     name_and_type_index: name_and_type_index
-                })
+                }))
             }
             CONSTANT_NAME_AND_TYPE => {
                 let name_index = try!(read_u16(rdr));

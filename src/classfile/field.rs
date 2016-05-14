@@ -94,10 +94,10 @@ impl Deref for Fields {
 
 #[derive(Debug)]
 pub struct FieldInfo {
-    access_flags: FieldAccessFlags,
-    name_index: u16,
-    descriptor_index: u16,
-    attributes: Attributes
+    pub access_flags: FieldAccessFlags,
+    pub name_index: u16,
+    pub descriptor_index: u16,
+    pub attributes: Attributes
 }
 
 impl FieldInfo {
@@ -114,4 +114,3 @@ impl FieldInfo {
         })
     }
 }
-
