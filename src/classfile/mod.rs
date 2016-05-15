@@ -4,6 +4,7 @@ pub mod constant_pool;
 pub mod attr;
 pub mod error;
 
+use std::fmt;
 use std::vec::Vec;
 use std::io;
 
@@ -66,6 +67,23 @@ impl ClassAccessFlags {
 
     pub fn is_enum(&self) -> bool {
         (self.access_flags & ACC_ENUM) != 0
+    }
+}
+
+impl fmt::Display for ClassAccessFlags {
+
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut v = Vec::new();
+        if self.is_public() { v.push("ACC_PUBLIC"); }
+        if self.is_final() { v.push("ACC_FINAL"); }
+        if self.is_super() { v.push("ACC_SUPER"); }
+        if self.is_interface() { v.push("ACC_INTERFACE"); }
+        if self.is_abstract() { v.push("ACC_ABSTRACT"); }
+        if self.is_synthetic() { v.push("ACC_SYNTHETIC"); }
+        if self.is_annotation() { v.push("ACC_ANNOTATION"); }
+        if self.is_enum() { v.push("ACC_ENUM"); }
+
+        write!(f, "{}", v.join(", "))
     }
 }
 

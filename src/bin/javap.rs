@@ -37,7 +37,7 @@ fn main() {
     if verbose {
         println!("  minor version: {}", class.minor_version);
         println!("  major version: {}", class.minor_version);
-        println!("  flags: TODO");
+        println!("  access flags: {}", class.access_flags);
         println!("Constant pool:");
         for (i, tag) in class.constant_pool.iter().enumerate() {
             println!("  #{} = {:?}", i+1, tag);
