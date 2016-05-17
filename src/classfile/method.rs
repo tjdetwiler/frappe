@@ -33,77 +33,74 @@ impl Deref for Methods {
     }
 }
 
-const ACC_PUBLIC: u16 = 0x0001;
-const ACC_PRIVATE: u16 = 0x0002;
-const ACC_PROTECTED: u16 = 0x0004;
-const ACC_STATIC: u16 = 0x0008;
-const ACC_FINAL: u16 = 0x0010;
-const ACC_SYNCHRONIZED: u16 = 0x0020;
-const ACC_BRIDGE: u16 = 0x0040;
-const ACC_VARARGS: u16 = 0x0080;
-const ACC_NATIVE: u16 = 0x0100;
-const ACC_ABSTRACT: u16 = 0x0400;
-const ACC_STRICT: u16 = 0x0800;
-const ACC_SYNTHETIC: u16 = 0x1000;
-
-#[derive(Debug)]
-pub struct MethodAccessFlags {
-    access_flags: u16
+bitflags! {
+    pub flags MethodAccessFlags: u16 {
+        const ACC_PUBLIC        = 0x0001,
+        const ACC_PRIVATE       = 0x0002,
+        const ACC_PROTECTED     = 0x0004,
+        const ACC_STATIC        = 0x0008,
+        const ACC_FINAL         = 0x0010,
+        const ACC_SYNCHRONIZED  = 0x0020,
+        const ACC_BRIDGE        = 0x0040,
+        const ACC_VARARGS       = 0x0080,
+        const ACC_NATIVE        = 0x0100,
+        const ACC_ABSTRACT      = 0x0400,
+        const ACC_STRICT        = 0x0800,
+        const ACC_SYNTHETIC     = 0x1000
+    }
 }
 
 impl MethodAccessFlags {
     fn new(access_flags: u16) -> MethodAccessFlags {
-        MethodAccessFlags {
-            access_flags: access_flags
-        }
+        MethodAccessFlags::from_bits_truncate(access_flags)
     }
 
     pub fn is_public(&self) -> bool {
-        (self.access_flags & ACC_PUBLIC) != 0
+        self.contains(ACC_PUBLIC)
     }
 
     pub fn is_private(&self) -> bool {
-        (self.access_flags & ACC_PRIVATE) != 0
+        self.contains(ACC_PRIVATE)
     }
 
     pub fn is_protected(&self) -> bool {
-        (self.access_flags & ACC_PROTECTED) != 0
+        self.contains(ACC_PROTECTED)
     }
 
     pub fn is_static(&self) -> bool {
-        (self.access_flags & ACC_STATIC) != 0
+        self.contains(ACC_STATIC)
     }
 
     pub fn is_final(&self) -> bool {
-        (self.access_flags & ACC_FINAL) != 0
+        self.contains(ACC_FINAL)
     }
 
-    pub fn is_syncronized(&self) -> bool {
-        (self.access_flags & ACC_SYNCHRONIZED) != 0
+    pub fn is_synchronized(&self) -> bool {
+        self.contains(ACC_SYNCHRONIZED)
     }
 
     pub fn is_bridge(&self) -> bool {
-        (self.access_flags & ACC_BRIDGE) != 0
+        self.contains(ACC_BRIDGE)
     }
 
     pub fn is_varargs(&self) -> bool {
-        (self.access_flags & ACC_VARARGS) != 0
+        self.contains(ACC_VARARGS)
     }
 
     pub fn is_native(&self) -> bool {
-        (self.access_flags & ACC_NATIVE) != 0
+        self.contains(ACC_NATIVE)
     }
 
     pub fn is_abstract(&self) -> bool {
-        (self.access_flags & ACC_ABSTRACT) != 0
+        self.contains(ACC_ABSTRACT)
     }
 
     pub fn is_strict(&self) -> bool {
-        (self.access_flags & ACC_STRICT) != 0
+        self.contains(ACC_STRICT)
     }
 
     pub fn is_synthetic(&self) -> bool {
-        (self.access_flags & ACC_SYNTHETIC) != 0
+        self.contains(ACC_SYNTHETIC)
     }
 }
 

@@ -15,58 +15,55 @@ use classfile::constant_pool::{ConstantPool, ClassTag, Tag};
 use classfile::field::Fields;
 use classfile::method::Methods;
 
+bitflags! {
+    pub flags ClassAccessFlags: u16 {
+        const ACC_PUBLIC        = 0x0001,
+        const ACC_FINAL         = 0x0010,
+        const ACC_SUPER         = 0x0020,
+        const ACC_INTERFACE     = 0x0200,
+        const ACC_ABSTRACT      = 0x0400,
+        const ACC_SYNTHETIC     = 0x1000,
+        const ACC_ANNOTATION    = 0x2000,
+        const ACC_ENUM          = 0x4000
 
-const ACC_PUBLIC: u16       = 0x0001;
-const ACC_FINAL: u16        = 0x0010;
-const ACC_SUPER: u16        = 0x0020;
-const ACC_INTERFACE: u16    = 0x0200;
-const ACC_ABSTRACT: u16     = 0x0400;
-const ACC_SYNTHETIC: u16    = 0x1000;
-const ACC_ANNOTATION: u16   = 0x2000;
-const ACC_ENUM: u16         = 0x4000;
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct ClassAccessFlags {
-    access_flags: u16
+    }
 }
 
 impl ClassAccessFlags {
     fn new(access_flags: u16) -> ClassAccessFlags {
-        ClassAccessFlags {
-            access_flags: access_flags
-        }
+        ClassAccessFlags::from_bits_truncate(access_flags)
     }
 
     pub fn is_public(&self) -> bool {
-        (self.access_flags & ACC_PUBLIC) != 0
+        self.contains(ACC_PUBLIC)
     }
 
     pub fn is_final(&self) -> bool {
-        (self.access_flags & ACC_FINAL) != 0
+        self.contains(ACC_FINAL)
     }
 
     pub fn is_super(&self) -> bool {
-        (self.access_flags & ACC_SUPER) != 0
+        self.contains(ACC_SUPER)
     }
 
     pub fn is_interface(&self) -> bool {
-        (self.access_flags & ACC_INTERFACE) != 0
+        self.contains(ACC_INTERFACE)
     }
 
     pub fn is_abstract(&self) -> bool {
-        (self.access_flags & ACC_ABSTRACT) != 0
+        self.contains(ACC_ABSTRACT)
     }
 
     pub fn is_synthetic(&self) -> bool {
-        (self.access_flags & ACC_SYNTHETIC) != 0
+        self.contains(ACC_SYNTHETIC)
     }
 
     pub fn is_annotation(&self) -> bool {
-        (self.access_flags & ACC_ANNOTATION) != 0
+        self.contains(ACC_ANNOTATION)
     }
 
     pub fn is_enum(&self) -> bool {
-        (self.access_flags & ACC_ENUM) != 0
+        self.contains(ACC_ENUM)
     }
 }
 
