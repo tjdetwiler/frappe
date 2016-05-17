@@ -1,8 +1,11 @@
 use std::fs::File;
 
+use frappe::classfile;
 use frappe::classfile::ClassFile;
 use frappe::classfile::constant_pool as cp;
 use frappe::classfile::constant_pool::Tag;
+use frappe::classfile::method;
+use frappe::classfile::field;
 
 #[test]
 fn test_load_hello_world_class() {
@@ -17,8 +20,9 @@ fn test_load_hello_world_class() {
     assert_eq!(52, classfile.major_version);
     assert_eq!(0, classfile.minor_version);
     assert_eq!(29, classfile.constant_pool.len());
-    assert!(classfile.access_flags.is_public());
-    assert!(classfile.access_flags.is_super());
+    assert_eq!(classfile::ACC_PUBLIC |
+               classfile::ACC_SUPER,
+               classfile.access_flags);
 
     // Constant pool entries
     assert_eq!(
@@ -130,8 +134,7 @@ fn test_load_hello_world_class() {
     assert_utf8_tag(
         "println",
         &classfile.constant_pool[27]);
-    assert_utf8_tag(
-        "(Ljava/lang/String;)V",
+    assert_utf8_tag( "(Ljava/lang/String;)V",
         &classfile.constant_pool[28]);
 
     assert_eq!(0, classfile.fields.len());
@@ -141,8 +144,8 @@ fn test_load_hello_world_class() {
     assert_eq!(2, classfile.methods.len());
     // ctor
     let ctor_info = &classfile.methods[0];
-    assert!(ctor_info.access_flags.is_public());
-    assert!(!ctor_info.access_flags.is_static());
+    assert_eq!(method::ACC_PUBLIC,
+               ctor_info.access_flags);
     assert_utf8_tag(
         "<init>",
         &classfile.constant_pool[ctor_info.name_index]);
@@ -151,8 +154,9 @@ fn test_load_hello_world_class() {
         &classfile.constant_pool[ctor_info.descriptor_index]);
     // main
     let main_info = &classfile.methods[1];
-    assert!(main_info.access_flags.is_static());
-    assert!(main_info.access_flags.is_public());
+    assert_eq!(method::ACC_STATIC |
+               method::ACC_PUBLIC,
+               main_info.access_flags);
     assert_utf8_tag(
         "main",
         &classfile.constant_pool[main_info.name_index]);
@@ -174,8 +178,9 @@ fn should_load_point_class() {
 
     // Then
     assert_eq!(2, class.fields.len());
-    assert!(!class.access_flags.is_interface());
-    assert!(!class.access_flags.is_annotation());
+    assert_eq!(classfile::ACC_PUBLIC |
+               classfile::ACC_SUPER,
+               class.access_flags);
     let this_class_desc = &class.constant_pool[class.this_class().name_index];
     assert_utf8_tag("io/hcf/frappe/Point", &this_class_desc);
     let super_class_desc = &class.constant_pool[class.super_class().unwrap().name_index];
@@ -183,18 +188,12 @@ fn should_load_point_class() {
 
     let x_field = &class.fields[0];
     assert_utf8_tag("x", &class.constant_pool[x_field.name_index]);
-    assert!(x_field.access_flags.is_private());
-    assert!(!x_field.access_flags.is_protected());
-    assert!(!x_field.access_flags.is_public());
-    assert!(!x_field.access_flags.is_static());
+    assert_eq!(field::ACC_PRIVATE, x_field.access_flags);
     assert_utf8_tag("I", &class.constant_pool[x_field.descriptor_index]);
 
     let y_field = &class.fields[1];
     assert_utf8_tag("y", &class.constant_pool[y_field.name_index]);
-    assert!(y_field.access_flags.is_private());
-    assert!(!y_field.access_flags.is_protected());
-    assert!(!y_field.access_flags.is_public());
-    assert!(!y_field.access_flags.is_static());
+    assert_eq!(field::ACC_PRIVATE, y_field.access_flags);
     assert_utf8_tag("I", &class.constant_pool[y_field.descriptor_index]);
 }
 
