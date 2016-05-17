@@ -78,7 +78,7 @@ fn main() {
     println!(" {{");
     if verbose {
         println!("  minor version: {}", class.minor_version);
-        println!("  major version: {}", class.minor_version);
+        println!("  major version: {}", class.major_version);
         println!("  access flags: {}", class.access_flags);
         println!("{}", class.constant_pool.pretty_print());
     }
