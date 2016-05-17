@@ -83,10 +83,10 @@ fn test_load_hello_world_class() {
         "HelloWorld.java",
         &classfile.constant_pool[14]);
     assert_eq!(
-        Tag::NameAndType {
+        Tag::NameAndType(cp::NameAndTypeTag {
             name_index: 7,
             descriptor_index: 8
-        },
+        }),
         classfile.constant_pool[15]);
     assert_eq!(
         Tag::Class(cp::ClassTag {
@@ -94,10 +94,10 @@ fn test_load_hello_world_class() {
         }),
         classfile.constant_pool[16]);
     assert_eq!(
-        Tag::NameAndType {
+        Tag::NameAndType(cp::NameAndTypeTag {
             name_index: 24,
             descriptor_index: 25
-        },
+        }),
         classfile.constant_pool[17]);
     assert_utf8_tag(
         "Hello World!",
@@ -108,10 +108,10 @@ fn test_load_hello_world_class() {
         }),
         classfile.constant_pool[19]);
     assert_eq!(
-        Tag::NameAndType {
+        Tag::NameAndType(cp::NameAndTypeTag {
             name_index: 27,
             descriptor_index: 28
-        },
+        }),
         classfile.constant_pool[20]);
     assert_utf8_tag(
         "io/hcf/frappe/HelloWorld",

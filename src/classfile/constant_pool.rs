@@ -85,6 +85,12 @@ pub struct StringTag {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct NameAndTypeTag {
+    pub name_index: u16,
+    pub descriptor_index: u16
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum Tag {
     Class(ClassTag),
     Fieldref(FieldrefTag),
@@ -105,10 +111,7 @@ pub enum Tag {
         high_bytes: u32,
         low_bytes: u32
     },
-    NameAndType {
-        name_index: u16,
-        descriptor_index: u16
-    },
+    NameAndType(NameAndTypeTag),
     Utf8(String),
     MethodHandle {
         reference_kind: u8,
@@ -220,10 +223,10 @@ impl Tag {
             CONSTANT_NAME_AND_TYPE => {
                 let name_index = try!(read_u16(rdr));
                 let descriptor_index = try!(read_u16(rdr));
-                Ok(Tag::NameAndType {
+                Ok(Tag::NameAndType(NameAndTypeTag {
                     name_index: name_index,
                     descriptor_index: descriptor_index
-                })
+                }))
             }
             CONSTANT_METHOD_HANDLE => {
                 let reference_kind = try!(read_u8(rdr));

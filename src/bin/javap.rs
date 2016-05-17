@@ -4,6 +4,48 @@ use std::fs::File;
 
 use frappe::classfile::ClassFile;
 use frappe::classfile::attr;
+use frappe::classfile::constant_pool;
+
+trait Javap {
+    fn pretty_print(&self) -> String;
+}
+
+impl Javap for constant_pool::Tag {
+    fn pretty_print(&self) -> String {
+        match *self {
+            constant_pool::Tag::Methodref(constant_pool::MethodrefTag{ref class_index, ref name_and_type_index}) => {
+                format!("Methodref\t\t#{}.#{}", class_index, name_and_type_index)
+            },
+            constant_pool::Tag::Fieldref(constant_pool::FieldrefTag{ref class_index, ref name_and_type_index}) => {
+                format!("Fieldref\t\t\t#{}.#{}", class_index, name_and_type_index)
+            },
+            constant_pool::Tag::String(constant_pool::StringTag{ref string_index}) => {
+                format!("String\t\t\t#{}", string_index)
+            },
+            constant_pool::Tag::Class(constant_pool::ClassTag{ref name_index}) => {
+                format!("Class\t\t\t#{}", name_index)
+            },
+            constant_pool::Tag::Utf8(ref string) => {
+                format!("Utf8\t\t\t{}", string)
+            },
+            constant_pool::Tag::NameAndType(constant_pool::NameAndTypeTag{ref name_index, ref descriptor_index}) => {
+                format!("NameAndType\t\t#{}:#{}", name_index, descriptor_index)
+            },
+            _ => format!("{:?}", self)
+        }
+    }
+}
+
+impl Javap for constant_pool::ConstantPool {
+    fn pretty_print(&self) -> String {
+        let mut pretty = String::new();
+        pretty.push_str(&format!("Constant pool:\n"));
+        for (i, tag) in self.iter().enumerate() {
+            pretty.push_str(&format!("  #{} = {}\n", i, tag.pretty_print()));
+        }
+        pretty
+    }
+}
 
 fn main() {
     let verbose = true;
@@ -38,10 +80,7 @@ fn main() {
         println!("  minor version: {}", class.minor_version);
         println!("  major version: {}", class.minor_version);
         println!("  access flags: {}", class.access_flags);
-        println!("Constant pool:");
-        for (i, tag) in class.constant_pool.iter().enumerate() {
-            println!("  #{} = {:?}", i+1, tag);
-        }
+        println!("{}", class.constant_pool.pretty_print());
     }
     for method in class.methods.iter() {
         print!("  ");
