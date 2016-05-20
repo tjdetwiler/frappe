@@ -5,6 +5,7 @@ use std::fs::File;
 use frappe::classfile::ClassFile;
 use frappe::classfile::attr;
 use frappe::classfile::constant_pool;
+use frappe::classfile::method;
 
 struct JavapOptions<'a> {
     verbose: bool,
@@ -36,31 +37,16 @@ impl Javap for ClassFile {
         } else {
             pretty.push_str("class");
         }
-        pretty.push_str(&format!(" {}", class_name.replace("/", ".")));
-        pretty.push_str(&format!(" {{\n"));
+        pretty.push_str(&format!(" {} ", class_name.replace("/", ".")));
         if opts.verbose {
+            pretty.push_str("\n");
             pretty.push_str(&format!("  minor version: {}\n", self.minor_version));
             pretty.push_str(&format!("  major version: {}\n", self.major_version));
             pretty.push_str(&format!("  access flags: {}\n", self.access_flags));
             pretty.push_str(&format!("{}\n", self.constant_pool.pretty_print(&opts)));
         }
-        for method in self.methods.iter() {
-            pretty.push_str("  ");
-            if method.access_flags.is_public() {
-                pretty.push_str("public ");
-            } else if method.access_flags.is_private() {
-                pretty.push_str("private ");
-            } else if method.access_flags.is_protected() {
-                pretty.push_str("protected ");
-            } else {
-                pretty.push_str("/* package */ ");
-            }
-            if method.access_flags.is_static() {
-                pretty.push_str("static ");
-            }
-            let method_name = self.constant_pool.get_string(method.name_index);
-            pretty.push_str(&format!("{}\n", method_name.unwrap()));
-        }
+        pretty.push_str(&format!("{{\n"));
+        pretty.push_str(&self.methods.pretty_print(opts));
         pretty.push_str("}");
         pretty
     }
@@ -97,8 +83,62 @@ impl Javap for constant_pool::ConstantPool {
         let mut pretty = String::new();
         pretty.push_str(&format!("Constant pool:\n"));
         for (i, tag) in self.iter().enumerate() {
-            pretty.push_str(&format!("  #{} = {}\n", i, tag.pretty_print(&opts)));
+            pretty.push_str(&format!("  #{} = {}\n", i + 1, tag.pretty_print(&opts)));
         }
+        pretty
+    }
+}
+
+impl Javap for method::Methods {
+    fn pretty_print(&self, opts: &JavapOptions) -> String {
+        let mut pretty = String::new();
+        for method in self.iter() {
+            pretty.push_str(&format!("{}\n", method.pretty_print(opts)));
+        }
+        pretty
+    }
+}
+
+impl Javap for method::MethodInfo {
+    fn pretty_print(&self, opts: &JavapOptions) -> String {
+        let mut pretty = String::new();
+        pretty.push_str("  ");
+        if self.access_flags.is_public() {
+            pretty.push_str("public ");
+        } else if self.access_flags.is_private() {
+            pretty.push_str("private ");
+        } else if self.access_flags.is_protected() {
+            pretty.push_str("protected ");
+        } else {
+            pretty.push_str("/* package */ ");
+        }
+        if self.access_flags.is_static() {
+            pretty.push_str("static ");
+        }
+        let method_descriptor = opts.classfile.constant_pool.get_string(self.descriptor_index);
+        let method_name = opts.classfile.constant_pool.get_string(self.name_index);
+        pretty.push_str(&format!("{};\n", method_name.unwrap()));
+        if opts.verbose {
+            pretty.push_str(&format!("    descriptor: {}\n", method_descriptor.unwrap()));
+            pretty.push_str(&format!("    flags: {:?}\n", self.access_flags));
+            if !self.access_flags.contains(method::ACC_ABSTRACT) {
+                pretty.push_str("    Code: \n");
+                for attr in self.attributes.iter() {
+                    if let attr::AttributeInfo::Code(ref code) = *attr{
+                        pretty.push_str(&code.pretty_print(opts));
+                    }
+                }
+            }
+        }
+        pretty
+    }
+}
+
+impl Javap for attr::Code {
+    fn pretty_print(&self, opts: &JavapOptions) -> String {
+        let mut pretty = String::new();
+        pretty.push_str(&format!("      stack={}, locals={}, args_size={}\n",
+                                 self.max_stack, self.max_locals, "TODO!"));
         pretty
     }
 }

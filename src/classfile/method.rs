@@ -3,7 +3,7 @@ use std::vec::Vec;
 use std::ops::Deref;
 
 use util::*;
-use classfile::attr::AttributeInfo;
+use classfile::attr::Attributes;
 use classfile::constant_pool as cp;
 
 #[derive(Debug)]
@@ -109,8 +109,7 @@ pub struct MethodInfo {
     pub access_flags: MethodAccessFlags,
     pub name_index: u16,
     pub descriptor_index: u16,
-    pub attributes_count: u16,
-    pub attribute_info: Vec<AttributeInfo>
+    pub attributes: Attributes
 }
 
 impl MethodInfo {
@@ -118,18 +117,12 @@ impl MethodInfo {
         let access_flags = try!(read_u16(rdr));
         let name_index = try!(read_u16(rdr));
         let descriptor_index = try!(read_u16(rdr));
-        let attributes_count = try!(read_u16(rdr));
-        let mut attribute_info: Vec<AttributeInfo> = vec![];
-        for _ in 0..attributes_count {
-            let attribute = try!(AttributeInfo::read(rdr, constant_pool));
-            attribute_info.push(attribute);
-        }
+        let attributes = try!(Attributes::read(rdr, constant_pool));
         Ok(MethodInfo {
             access_flags: MethodAccessFlags::new(access_flags),
             name_index: name_index,
             descriptor_index: descriptor_index,
-            attributes_count: attributes_count,
-            attribute_info: attribute_info
+            attributes: attributes
         })
     }
 }
