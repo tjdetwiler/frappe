@@ -9,7 +9,7 @@ use frappe::classfile::method;
 
 struct JavapOptions<'a> {
     verbose: bool,
-    classfile: &'a ClassFile
+    classfile: &'a ClassFile,
 }
 
 trait Javap {
@@ -55,25 +55,26 @@ impl Javap for ClassFile {
 impl Javap for constant_pool::Tag {
     fn pretty_print(&self, _: &JavapOptions) -> String {
         match *self {
-            constant_pool::Tag::Methodref(constant_pool::MethodrefTag{ref class_index, ref name_and_type_index}) => {
+            constant_pool::Tag::Methodref(constant_pool::MethodrefTag{
+                ref class_index, ref name_and_type_index}) => {
                 format!("Methodref\t\t#{}.#{}", class_index, name_and_type_index)
-            },
-            constant_pool::Tag::Fieldref(constant_pool::FieldrefTag{ref class_index, ref name_and_type_index}) => {
+            }
+            constant_pool::Tag::Fieldref(constant_pool::FieldrefTag{
+                ref class_index, ref name_and_type_index}) => {
                 format!("Fieldref\t\t\t#{}.#{}", class_index, name_and_type_index)
-            },
-            constant_pool::Tag::String(constant_pool::StringTag{ref string_index}) => {
+            }
+            constant_pool::Tag::String(constant_pool::StringTag { ref string_index }) => {
                 format!("String\t\t\t#{}", string_index)
-            },
-            constant_pool::Tag::Class(constant_pool::ClassTag{ref name_index}) => {
+            }
+            constant_pool::Tag::Class(constant_pool::ClassTag { ref name_index }) => {
                 format!("Class\t\t\t#{}", name_index)
-            },
-            constant_pool::Tag::Utf8(ref string) => {
-                format!("Utf8\t\t\t{}", string)
-            },
-            constant_pool::Tag::NameAndType(constant_pool::NameAndTypeTag{ref name_index, ref descriptor_index}) => {
+            }
+            constant_pool::Tag::Utf8(ref string) => format!("Utf8\t\t\t{}", string),
+            constant_pool::Tag::NameAndType(constant_pool::NameAndTypeTag{
+                ref name_index, ref descriptor_index}) => {
                 format!("NameAndType\t\t#{}:#{}", name_index, descriptor_index)
-            },
-            _ => format!("{:?}", self)
+            }
+            _ => format!("{:?}", self),
         }
     }
 }
@@ -124,7 +125,7 @@ impl Javap for method::MethodInfo {
             if !self.access_flags.contains(method::ACC_ABSTRACT) {
                 pretty.push_str("    Code: \n");
                 for attr in self.attributes.iter() {
-                    if let attr::AttributeInfo::Code(ref code) = *attr{
+                    if let attr::AttributeInfo::Code(ref code) = *attr {
                         pretty.push_str(&code.pretty_print(opts));
                     }
                 }
@@ -138,7 +139,9 @@ impl Javap for attr::Code {
     fn pretty_print(&self, opts: &JavapOptions) -> String {
         let mut pretty = String::new();
         pretty.push_str(&format!("      stack={}, locals={}, args_size={}\n",
-                                 self.max_stack, self.max_locals, "TODO!"));
+                                 self.max_stack,
+                                 self.max_locals,
+                                 "TODO!"));
         pretty
     }
 }
@@ -150,6 +153,9 @@ fn main() {
     class_filename.push_str(".class");
     let mut class_file = File::open(class_filename).unwrap();
     let class = ClassFile::read(&mut class_file).unwrap();
-    let opts = JavapOptions { verbose: verbose, classfile: &class };
+    let opts = JavapOptions {
+        verbose: verbose,
+        classfile: &class,
+    };
     println!("{}", class.pretty_print(&opts));
 }

@@ -7,9 +7,10 @@ use classfile::attr::Attributes;
 use classfile::constant_pool as cp;
 
 bitflags! {
-    /// Holds the
-    /// [`access_flags`](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.5-200-A.1)
-    /// value from a `FieldInfo` structure.
+/// Holds the
+/// [`access_flags`]
+/// (https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.5-200-A.1)
+/// value from a `FieldInfo` structure.
     pub flags FieldAccessFlags: u16 {
         const ACC_PUBLIC        = 0x0001,
         const ACC_PRIVATE       = 0x0002,
@@ -77,7 +78,7 @@ impl FieldAccessFlags {
 /// Wrapper around a `Vec<FieldInfo>`.
 #[derive(Debug)]
 pub struct Fields {
-    fields: Vec<FieldInfo>
+    fields: Vec<FieldInfo>,
 }
 
 impl Fields {
@@ -91,9 +92,7 @@ impl Fields {
             let entry = try!(FieldInfo::read(rdr, constant_pool));
             fields.push(entry);
         }
-        Ok(Fields {
-            fields: fields
-        })
+        Ok(Fields { fields: fields })
     }
 }
 
@@ -112,16 +111,20 @@ pub struct FieldInfo {
     pub access_flags: FieldAccessFlags,
     /// The name of this field.
     pub name_index: u16,
-    /// A [field descriptor string](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.2).
+    /// A [field descriptor string]
+    /// (https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.2).
     pub descriptor_index: u16,
     /// Collection of attributes that are associated with this field.
-    pub attributes: Attributes
+    pub attributes: Attributes,
 }
 
 impl FieldInfo {
-    /// Constructs a [`FieldInfo`](https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.5)
+    /// Constructs a [`FieldInfo`]
+    /// (https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.5)
     /// structure from a byte stream containing classfile data.
-    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> io::Result<FieldInfo> {
+    pub fn read<T: io::Read>(rdr: &mut T,
+                             constant_pool: &cp::ConstantPool)
+                             -> io::Result<FieldInfo> {
         let access_flags = try!(read_u16(rdr));
         let name_index = try!(read_u16(rdr));
         let descriptor_index = try!(read_u16(rdr));
@@ -130,7 +133,7 @@ impl FieldInfo {
             access_flags: FieldAccessFlags::new(access_flags),
             name_index: name_index,
             descriptor_index: descriptor_index,
-            attributes: attributes
+            attributes: attributes,
         })
     }
 }

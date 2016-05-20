@@ -8,7 +8,7 @@ use classfile::constant_pool as cp;
 
 #[derive(Debug)]
 pub struct Methods {
-    methods: Vec<MethodInfo>
+    methods: Vec<MethodInfo>,
 }
 
 impl Methods {
@@ -19,9 +19,7 @@ impl Methods {
             let entry = try!(MethodInfo::read(rdr, constant_pool));
             methods.push(entry);
         }
-        Ok(Methods {
-            methods: methods
-        })
+        Ok(Methods { methods: methods })
     }
 }
 
@@ -109,11 +107,13 @@ pub struct MethodInfo {
     pub access_flags: MethodAccessFlags,
     pub name_index: u16,
     pub descriptor_index: u16,
-    pub attributes: Attributes
+    pub attributes: Attributes,
 }
 
 impl MethodInfo {
-    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> io::Result<MethodInfo> {
+    pub fn read<T: io::Read>(rdr: &mut T,
+                             constant_pool: &cp::ConstantPool)
+                             -> io::Result<MethodInfo> {
         let access_flags = try!(read_u16(rdr));
         let name_index = try!(read_u16(rdr));
         let descriptor_index = try!(read_u16(rdr));
@@ -122,8 +122,7 @@ impl MethodInfo {
             access_flags: MethodAccessFlags::new(access_flags),
             name_index: name_index,
             descriptor_index: descriptor_index,
-            attributes: attributes
+            attributes: attributes,
         })
     }
 }
-

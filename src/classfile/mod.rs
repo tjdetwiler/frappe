@@ -68,17 +68,32 @@ impl ClassAccessFlags {
 }
 
 impl fmt::Display for ClassAccessFlags {
-
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut v = Vec::new();
-        if self.is_public() { v.push("ACC_PUBLIC"); }
-        if self.is_final() { v.push("ACC_FINAL"); }
-        if self.is_super() { v.push("ACC_SUPER"); }
-        if self.is_interface() { v.push("ACC_INTERFACE"); }
-        if self.is_abstract() { v.push("ACC_ABSTRACT"); }
-        if self.is_synthetic() { v.push("ACC_SYNTHETIC"); }
-        if self.is_annotation() { v.push("ACC_ANNOTATION"); }
-        if self.is_enum() { v.push("ACC_ENUM"); }
+        if self.is_public() {
+            v.push("ACC_PUBLIC");
+        }
+        if self.is_final() {
+            v.push("ACC_FINAL");
+        }
+        if self.is_super() {
+            v.push("ACC_SUPER");
+        }
+        if self.is_interface() {
+            v.push("ACC_INTERFACE");
+        }
+        if self.is_abstract() {
+            v.push("ACC_ABSTRACT");
+        }
+        if self.is_synthetic() {
+            v.push("ACC_SYNTHETIC");
+        }
+        if self.is_annotation() {
+            v.push("ACC_ANNOTATION");
+        }
+        if self.is_enum() {
+            v.push("ACC_ENUM");
+        }
 
         write!(f, "{}", v.join(", "))
     }
@@ -96,7 +111,7 @@ pub struct ClassFile {
     pub interfaces: Vec<u16>,
     pub fields: Fields,
     pub methods: Methods,
-    pub attributes: Attributes
+    pub attributes: Attributes,
 }
 
 impl ClassFile {
@@ -129,7 +144,7 @@ impl ClassFile {
             interfaces: interfaces,
             fields: fields,
             methods: methods,
-            attributes: attributes
+            attributes: attributes,
         })
     }
 
@@ -138,7 +153,8 @@ impl ClassFile {
         if let Tag::Class(ref class_tag) = *tag {
             class_tag
         } else {
-            panic!(format!("ConstantPoolTag entry found is not of type Class: {:?}", tag));
+            panic!(format!("ConstantPoolTag entry found is not of type Class: {:?}",
+                           tag));
         }
     }
 
@@ -150,9 +166,8 @@ impl ClassFile {
         if let Tag::Class(ref class_tag) = *tag {
             Some(class_tag)
         } else {
-            panic!(format!("ConstantPoolTag entry found is not of type Class: {:?}", tag));
+            panic!(format!("ConstantPoolTag entry found is not of type Class: {:?}",
+                           tag));
         }
     }
 }
-
-
