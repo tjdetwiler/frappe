@@ -6,18 +6,18 @@ use classfile::constant_pool as cp;
 use util::*;
 
 #[derive(Debug)]
-pub struct SourceFile {
+pub struct SourceFileAttribute {
     pub sourcefile_index: u16,
 }
 
-impl SourceFile {
-    fn read<T: io::Read>(rdr: &mut T) -> io::Result<SourceFile> {
+impl SourceFileAttribute {
+    fn read<T: io::Read>(rdr: &mut T) -> io::Result<SourceFileAttribute> {
         let sourcefile_index = try!(read_u16(rdr));
-        Ok(SourceFile { sourcefile_index: sourcefile_index })
+        Ok(SourceFileAttribute { sourcefile_index: sourcefile_index })
     }
 }
 
-/// Defines an entry in the `exception_table` of a `Code` attribute.
+/// Defines an entry in the `exception_table` of a `CodeAttribute`.
 #[derive(Debug)]
 pub struct ExceptionInfo {
     pub start_pc: u16,
@@ -42,7 +42,7 @@ impl ExceptionInfo {
 }
 
 #[derive(Debug)]
-pub struct Code {
+pub struct CodeAttribute {
     pub max_stack: u16,
     pub max_locals: u16,
     pub code: Vec<u8>,
@@ -50,8 +50,8 @@ pub struct Code {
     pub attributes: Attributes,
 }
 
-impl Code {
-    fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> io::Result<Code> {
+impl CodeAttribute {
+    fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> io::Result<CodeAttribute> {
         let max_stack = try!(read_u16(rdr));
         let max_locals = try!(read_u16(rdr));
         let code_length = try!(read_u32(rdr));
@@ -67,7 +67,7 @@ impl Code {
             exception_table.push(exception_info);
         }
         let attributes = try!(Attributes::read(rdr, constant_pool));
-        Ok(Code {
+        Ok(CodeAttribute {
             max_stack: max_stack,
             max_locals: max_locals,
             code: code,
@@ -106,8 +106,8 @@ impl Deref for Attributes {
 
 #[derive(Debug)]
 pub enum AttributeInfo {
-    SourceFile(Box<SourceFile>),
-    Code(Box<Code>),
+    SourceFile(Box<SourceFileAttribute>),
+    Code(Box<CodeAttribute>),
     Raw(Box<Vec<u8>>),
 }
 
@@ -130,11 +130,11 @@ impl AttributeInfo {
         let attribute_length = try!(read_u32(rdr));
         match name {
             "SourceFile" => {
-                let source_file = try!(SourceFile::read(rdr));
+                let source_file = try!(SourceFileAttribute::read(rdr));
                 Ok(AttributeInfo::SourceFile(Box::new(source_file)))
             }
             "Code" => {
-                let code = try!(Code::read(rdr, constant_pool));
+                let code = try!(CodeAttribute::read(rdr, constant_pool));
                 Ok(AttributeInfo::Code(Box::new(code)))
             }
             _ => {

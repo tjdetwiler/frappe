@@ -3,6 +3,10 @@ use classfile::attr;
 use classfile::constant_pool as cp;
 use classfile::method;
 
+mod decode;
+
+pub use self::decode::*;
+
 pub struct Options<'a> {
     pub verbose: bool,
     pub constant_pool: &'a cp::ConstantPool
@@ -131,13 +135,14 @@ impl Disassemble for method::MethodInfo {
     }
 }
 
-impl Disassemble for attr::Code {
+impl Disassemble for attr::CodeAttribute {
     fn pretty_print(&self, opts: &Options) -> String {
         let mut pretty = String::new();
         pretty.push_str(&format!("      stack={}, locals={}, args_size={}\n",
                                  self.max_stack,
                                  self.max_locals,
                                  "TODO!"));
+        pretty.push_str(&decode_instrs(&self.code));
         pretty
     }
 }
