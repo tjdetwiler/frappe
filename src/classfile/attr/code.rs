@@ -1,6 +1,7 @@
 use std::io;
 use std::vec::Vec;
 
+use classfile::error::*;
 use classfile::constant_pool as cp;
 use util::*;
 
@@ -16,7 +17,7 @@ pub struct ExceptionInfo {
 }
 
 impl ExceptionInfo {
-    pub fn read<T: io::Read>(rdr: &mut T) -> io::Result<ExceptionInfo> {
+    pub fn read<T: io::Read>(rdr: &mut T) -> Result<ExceptionInfo> {
         let start_pc = try!(read_u16(rdr));
         let end_pc = try!(read_u16(rdr));
         let handler_pc = try!(read_u16(rdr));
@@ -42,7 +43,7 @@ pub struct CodeAttribute {
 impl CodeAttribute {
     pub fn read<T: io::Read>(rdr: &mut T,
                              constant_pool: &cp::ConstantPool)
-                             -> io::Result<CodeAttribute> {
+                             -> Result<CodeAttribute> {
         let max_stack = try!(read_u16(rdr));
         let max_locals = try!(read_u16(rdr));
         let code_length = try!(read_u32(rdr));

@@ -3,6 +3,7 @@ use std::vec::Vec;
 use std::ops::Deref;
 
 use util::*;
+use classfile::error::*;
 use classfile::attr::Attributes;
 use classfile::constant_pool as cp;
 
@@ -85,7 +86,7 @@ impl Fields {
     /// Reads in a list of `FieldInfo` structures. The reader should be positioned such that
     /// the next 2 byte define the number of entries, followed immediately by the
     /// `FieldInfo` structures.
-    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> io::Result<Fields> {
+    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> Result<Fields> {
         let fields_count = try!(read_u16(rdr));
         let mut fields: Vec<FieldInfo> = vec![];
         for _ in 0..fields_count {
@@ -124,7 +125,7 @@ impl FieldInfo {
     /// structure from a byte stream containing classfile data.
     pub fn read<T: io::Read>(rdr: &mut T,
                              constant_pool: &cp::ConstantPool)
-                             -> io::Result<FieldInfo> {
+                             -> Result<FieldInfo> {
         let access_flags = try!(read_u16(rdr));
         let name_index = try!(read_u16(rdr));
         let descriptor_index = try!(read_u16(rdr));

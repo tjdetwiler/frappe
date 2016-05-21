@@ -3,6 +3,7 @@ use std::vec::Vec;
 use std::ops::Deref;
 
 use util::*;
+use classfile::error::*;
 use classfile::attr::Attributes;
 use classfile::constant_pool as cp;
 
@@ -12,7 +13,7 @@ pub struct Methods {
 }
 
 impl Methods {
-    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> io::Result<Methods> {
+    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> Result<Methods> {
         let methods_count = try!(read_u16(rdr));
         let mut methods: Vec<MethodInfo> = vec![];
         for _ in 0..methods_count {
@@ -113,7 +114,7 @@ pub struct MethodInfo {
 impl MethodInfo {
     pub fn read<T: io::Read>(rdr: &mut T,
                              constant_pool: &cp::ConstantPool)
-                             -> io::Result<MethodInfo> {
+                             -> Result<MethodInfo> {
         let access_flags = try!(read_u16(rdr));
         let name_index = try!(read_u16(rdr));
         let descriptor_index = try!(read_u16(rdr));
