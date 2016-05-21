@@ -32,6 +32,8 @@ mod stack_map_table;
 pub use self::stack_map_table::*;
 mod signature;
 pub use self::signature::*;
+mod local_variable_type_table;
+pub use self::local_variable_type_table::*;
 
 #[derive(Debug)]
 pub struct Attributes {
@@ -70,6 +72,7 @@ pub enum AttributeInfo {
     Exceptions(Box<ExceptionsAttribute>),
     LineNumberTable(Box<LineNumberTableAttribute>),
     LocalVariableTable(Box<LocalVariableTableAttribute>),
+    LocalVariableTypeTable(Box<LocalVariableTypeTableAttribute>),
     StackMapTable(Box<StackMapTableAttribute>),
     Synthetic,
     Signature(Box<SignatureAttribute>),
@@ -134,6 +137,10 @@ impl AttributeInfo {
             "LocalVariableTable" => {
                 let local_variable_table = try!(LocalVariableTableAttribute::read(rdr));
                 Ok(AttributeInfo::LocalVariableTable(Box::new(local_variable_table)))
+            }
+            "LocalVariableTypeTable" => {
+                let local_variable_type_table = try!(LocalVariableTypeTableAttribute::read(rdr));
+                Ok(AttributeInfo::LocalVariableTypeTable(Box::new(local_variable_type_table)))
             }
             "StackMapTable" => {
                 let stack_map_table = try!(StackMapTableAttribute::read(rdr));
