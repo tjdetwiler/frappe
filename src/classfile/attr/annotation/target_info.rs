@@ -4,7 +4,7 @@ use util::*;
 use classfile::error::{Error, Result};
 
 #[derive(Debug)]
-pub enum TargetType {
+pub enum TargetInfo {
     TypeParameter(TypeParameterTarget),
     Supertype(SupertypeTarget),
     TypeParameterBound(TypeParameterBoundTarget),
@@ -17,46 +17,46 @@ pub enum TargetType {
     TypeArgument(TypeArgumentTarget),
 }
 
-impl TargetType {
-    pub fn read<T: io::Read>(rdr: &mut T) -> Result<TargetType> {
+impl TargetInfo {
+    pub fn read<T: io::Read>(rdr: &mut T) -> Result<TargetInfo> {
         let target_type = try!(read_u8(rdr));
         match target_type {
             0x00...0x01 => {
                 let type_parameter_target = try!(TypeParameterTarget::read(rdr));
-                Ok(TargetType::TypeParameter(type_parameter_target))
+                Ok(TargetInfo::TypeParameter(type_parameter_target))
             }
             0x10 => {
                 let supertype_target = try!(SupertypeTarget::read(rdr));
-                Ok(TargetType::Supertype(supertype_target))
+                Ok(TargetInfo::Supertype(supertype_target))
             }
             0x11...0x12 => {
                 let type_parameter_bound_target = try!(TypeParameterBoundTarget::read(rdr));
-                Ok(TargetType::TypeParameterBound(type_parameter_bound_target))
+                Ok(TargetInfo::TypeParameterBound(type_parameter_bound_target))
             }
-            0x13...0x15 => Ok(TargetType::Empty),
+            0x13...0x15 => Ok(TargetInfo::Empty),
             0x16 => {
                 let method_formal_parameter_target = try!(FormalParameterTarget::read(rdr));
-                Ok(TargetType::MethodFormalParameter(method_formal_parameter_target))
+                Ok(TargetInfo::MethodFormalParameter(method_formal_parameter_target))
             }
             0x17 => {
                 let throws_target = try!(ThrowsTarget::read(rdr));
-                Ok(TargetType::Throws(throws_target))
+                Ok(TargetInfo::Throws(throws_target))
             }
             0x40...0x41 => {
                 let localvar_target = try!(LocalvarTarget::read(rdr));
-                Ok(TargetType::Localvar(localvar_target))
+                Ok(TargetInfo::Localvar(localvar_target))
             }
             0x42 => {
                 let catch_target = try!(CatchTarget::read(rdr));
-                Ok(TargetType::Catch(catch_target))
+                Ok(TargetInfo::Catch(catch_target))
             }
             0x43...0x46 => {
                 let offset_target = try!(OffsetTarget::read(rdr));
-                Ok(TargetType::Offset(offset_target))
+                Ok(TargetInfo::Offset(offset_target))
             }
             0x47...0x4b => {
                 let type_argument_target = try!(TypeArgumentTarget::read(rdr));
-                Ok(TargetType::TypeArgument(type_argument_target))
+                Ok(TargetInfo::TypeArgument(type_argument_target))
             }
             target_type => Err(Error::InvalidTargetTypeTag(target_type)),
         }

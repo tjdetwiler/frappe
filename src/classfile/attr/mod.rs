@@ -8,6 +8,8 @@ use util::*;
 
 pub mod annotation;
 
+use classfile::attr::annotation::{Annotations, ParameterAnnotations, TypeAnnotations};
+
 mod code;
 pub use self::code::*;
 mod source_file;
@@ -82,6 +84,12 @@ pub enum AttributeInfo {
     Signature(Box<SignatureAttribute>),
     AnnotationDefault(Box<AnnotationDefaultAttribute>),
     MethodParameters(Box<MethodParametersAttribute>),
+    RuntimeVisibleAnnotations(Box<Annotations>),
+    RuntimeInvisibleAnnotations(Box<Annotations>),
+    RuntimeVisibleTypeAnnotations(Box<TypeAnnotations>),
+    RuntimeInvisibleTypeAnnotations(Box<TypeAnnotations>),
+    RuntimeVisibleParameterAnnotations(Box<ParameterAnnotations>),
+    RuntimeInvisibleParameterAnnotations(Box<ParameterAnnotations>),
     Deprecated,
     Raw(Box<Vec<u8>>),
 }
@@ -166,6 +174,31 @@ impl AttributeInfo {
             "MethodParameters" => {
                 let method_parameters = try!(MethodParametersAttribute::read(rdr));
                 Ok(AttributeInfo::MethodParameters(Box::new(method_parameters)))
+            }
+            "RuntimeVisibleAnnotations" => {
+                let annotations = try!(Annotations::read(rdr));
+                Ok(AttributeInfo::RuntimeVisibleAnnotations(Box::new(annotations)))
+            }
+            "RuntimeInvisibleAnnotations" => {
+                let annotations = try!(Annotations::read(rdr));
+                Ok(AttributeInfo::RuntimeInvisibleAnnotations(Box::new(annotations)))
+            }
+            "RuntimeVisibleTypeAnnotations" => {
+                let annotations = try!(TypeAnnotations::read(rdr));
+                Ok(AttributeInfo::RuntimeVisibleTypeAnnotations(Box::new(annotations)))
+            }
+            "RuntimeInvisibleTypeAnnotations" => {
+                let annotations = try!(TypeAnnotations::read(rdr));
+                Ok(AttributeInfo::RuntimeInvisibleTypeAnnotations(Box::new(annotations)))
+            }
+            "RuntimeVisibleParameterAnnotations" => {
+                let annotations = try!(ParameterAnnotations::read(rdr));
+                Ok(AttributeInfo::RuntimeVisibleParameterAnnotations(Box::new(annotations)))
+
+            }
+            "RuntimeInvisibleParameterAnnotations" => {
+                let annotations = try!(ParameterAnnotations::read(rdr));
+                Ok(AttributeInfo::RuntimeInvisibleParameterAnnotations(Box::new(annotations)))
             }
             attr_name => {
                 println!("UNKNOWN ATTRIBUTE {}", attr_name);

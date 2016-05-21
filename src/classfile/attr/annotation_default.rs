@@ -1,6 +1,5 @@
 use std::io;
 
-use util::*;
 use classfile::error::Result;
 use classfile::attr::annotation::ElementValue;
 
