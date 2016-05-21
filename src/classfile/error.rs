@@ -13,6 +13,7 @@ pub enum Error {
     InvalidTargetTypeTag(u8),
     InvalidVerificationTypeInfoTag(u8),
     InvalidStackFrameType(u8),
+    InvalidElementValueTag(u8),
 }
 
 impl fmt::Display for Error {
