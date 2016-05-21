@@ -6,6 +6,8 @@ use classfile::error::*;
 use classfile::constant_pool as cp;
 use util::*;
 
+pub mod annotation;
+
 mod code;
 pub use self::code::*;
 mod source_file;
