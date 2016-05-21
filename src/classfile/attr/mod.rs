@@ -26,6 +26,8 @@ mod exceptions;
 pub use self::exceptions::*;
 mod line_number_table;
 pub use self::line_number_table::*;
+mod local_variable_table;
+pub use self::local_variable_table::*;
 
 #[derive(Debug)]
 pub struct Attributes {
@@ -63,6 +65,7 @@ pub enum AttributeInfo {
     Code(Box<CodeAttribute>),
     Exceptions(Box<ExceptionsAttribute>),
     LineNumberTable(Box<LineNumberTableAttribute>),
+    LocalVariableTable(Box<LocalVariableTableAttribute>),
     Raw(Box<Vec<u8>>),
 }
 
@@ -120,6 +123,10 @@ impl AttributeInfo {
             "LineNumberTable" => {
                 let line_number_table = try!(LineNumberTableAttribute::read(rdr));
                 Ok(AttributeInfo::LineNumberTable(Box::new(line_number_table)))
+            }
+            "LocalVariableTable" => {
+                let local_variable_table = try!(LocalVariableTableAttribute::read(rdr));
+                Ok(AttributeInfo::LocalVariableTable(Box::new(local_variable_table)))
             }
             attr_name => {
                 println!("UNKNOWN ATTRIBUTE {}", attr_name);
