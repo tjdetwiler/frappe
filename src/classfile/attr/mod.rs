@@ -24,6 +24,8 @@ mod constant_value;
 pub use self::constant_value::*;
 mod exceptions;
 pub use self::exceptions::*;
+mod line_number_table;
+pub use self::line_number_table::*;
 
 #[derive(Debug)]
 pub struct Attributes {
@@ -60,6 +62,7 @@ pub enum AttributeInfo {
     ConstantValue(Box<ConstantValueAttribute>),
     Code(Box<CodeAttribute>),
     Exceptions(Box<ExceptionsAttribute>),
+    LineNumberTable(Box<LineNumberTableAttribute>),
     Raw(Box<Vec<u8>>),
 }
 
@@ -114,7 +117,12 @@ impl AttributeInfo {
                 let exceptions = try!(ExceptionsAttribute::read(rdr));
                 Ok(AttributeInfo::Exceptions(Box::new(exceptions)))
             }
-            _ => {
+            "LineNumberTable" => {
+                let line_number_table = try!(LineNumberTableAttribute::read(rdr));
+                Ok(AttributeInfo::LineNumberTable(Box::new(line_number_table)))
+            }
+            attr_name => {
+                println!("UNKNOWN ATTRIBUTE {}", attr_name);
                 let mut info: Vec<u8> = vec![];
                 for _ in 0..attribute_length {
                     let byte = try!(read_u8(rdr));
