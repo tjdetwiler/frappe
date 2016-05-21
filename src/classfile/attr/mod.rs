@@ -30,6 +30,8 @@ mod local_variable_table;
 pub use self::local_variable_table::*;
 mod stack_map_table;
 pub use self::stack_map_table::*;
+mod signature;
+pub use self::signature::*;
 
 #[derive(Debug)]
 pub struct Attributes {
@@ -69,6 +71,8 @@ pub enum AttributeInfo {
     LineNumberTable(Box<LineNumberTableAttribute>),
     LocalVariableTable(Box<LocalVariableTableAttribute>),
     StackMapTable(Box<StackMapTableAttribute>),
+    Synthetic,
+    Signature(Box<SignatureAttribute>),
     Raw(Box<Vec<u8>>),
 }
 
@@ -134,6 +138,11 @@ impl AttributeInfo {
             "StackMapTable" => {
                 let stack_map_table = try!(StackMapTableAttribute::read(rdr));
                 Ok(AttributeInfo::StackMapTable(Box::new(stack_map_table)))
+            }
+            "Synthetic" => Ok(AttributeInfo::Synthetic),
+            "Signature" => {
+                let signature = try!(SignatureAttribute::read(rdr));
+                Ok(AttributeInfo::Signature(Box::new(signature)))
             }
             attr_name => {
                 println!("UNKNOWN ATTRIBUTE {}", attr_name);
