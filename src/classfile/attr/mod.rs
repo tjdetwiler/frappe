@@ -82,6 +82,7 @@ pub enum AttributeInfo {
     Signature(Box<SignatureAttribute>),
     AnnotationDefault(Box<AnnotationDefaultAttribute>),
     MethodParameters(Box<MethodParametersAttribute>),
+    Deprecated,
     Raw(Box<Vec<u8>>),
 }
 
@@ -153,6 +154,7 @@ impl AttributeInfo {
                 Ok(AttributeInfo::StackMapTable(Box::new(stack_map_table)))
             }
             "Synthetic" => Ok(AttributeInfo::Synthetic),
+            "Deprecated" => Ok(AttributeInfo::Deprecated),
             "Signature" => {
                 let signature = try!(SignatureAttribute::read(rdr));
                 Ok(AttributeInfo::Signature(Box::new(signature)))
