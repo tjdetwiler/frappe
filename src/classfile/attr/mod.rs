@@ -16,6 +16,8 @@ mod enclosing_method;
 pub use self::enclosing_method::*;
 mod source_debug_extension;
 pub use self::source_debug_extension::*;
+mod bootstrap_methods;
+pub use self::bootstrap_methods::*;
 
 #[derive(Debug)]
 pub struct Attributes {
@@ -50,6 +52,7 @@ pub enum AttributeInfo {
     InnerClasses(Box<InnerClassesAttribute>),
     EnclosingMethod(Box<EnclosingMethodAttribute>),
     SourceDebugExtension(Box<SourceDebugExtensionAttribute>),
+    BootstrapMethods(Box<BootstrapMethodsAttribute>),
     Code(Box<CodeAttribute>),
     Raw(Box<Vec<u8>>),
 }
@@ -92,6 +95,10 @@ impl AttributeInfo {
                 let source_debug_extension = try!(SourceDebugExtensionAttribute::read(rdr,
                                                                                       attribute_length));
                 Ok(AttributeInfo::SourceDebugExtension(Box::new(source_debug_extension)))
+            }
+            "BootstrapMethods" => {
+                let bootstrap_methods = try!(BootstrapMethodsAttribute::read(rdr));
+                Ok(AttributeInfo::BootstrapMethods(Box::new(bootstrap_methods)))
             }
             _ => {
                 let mut info: Vec<u8> = vec![];
