@@ -34,6 +34,8 @@ mod signature;
 pub use self::signature::*;
 mod local_variable_type_table;
 pub use self::local_variable_type_table::*;
+mod annotation_default;
+pub use self::annotation_default::*;
 
 #[derive(Debug)]
 pub struct Attributes {
@@ -76,6 +78,7 @@ pub enum AttributeInfo {
     StackMapTable(Box<StackMapTableAttribute>),
     Synthetic,
     Signature(Box<SignatureAttribute>),
+    AnnotationDefault(Box<AnnotationDefaultAttribute>),
     Raw(Box<Vec<u8>>),
 }
 
@@ -150,6 +153,10 @@ impl AttributeInfo {
             "Signature" => {
                 let signature = try!(SignatureAttribute::read(rdr));
                 Ok(AttributeInfo::Signature(Box::new(signature)))
+            }
+            "AnnotationDefault" => {
+                let annotation_default = try!(AnnotationDefaultAttribute::read(rdr));
+                Ok(AttributeInfo::AnnotationDefault(Box::new(annotation_default)))
             }
             attr_name => {
                 println!("UNKNOWN ATTRIBUTE {}", attr_name);
