@@ -28,6 +28,8 @@ mod line_number_table;
 pub use self::line_number_table::*;
 mod local_variable_table;
 pub use self::local_variable_table::*;
+mod stack_map_table;
+pub use self::stack_map_table::*;
 
 #[derive(Debug)]
 pub struct Attributes {
@@ -66,6 +68,7 @@ pub enum AttributeInfo {
     Exceptions(Box<ExceptionsAttribute>),
     LineNumberTable(Box<LineNumberTableAttribute>),
     LocalVariableTable(Box<LocalVariableTableAttribute>),
+    StackMapTable(Box<StackMapTableAttribute>),
     Raw(Box<Vec<u8>>),
 }
 
@@ -127,6 +130,10 @@ impl AttributeInfo {
             "LocalVariableTable" => {
                 let local_variable_table = try!(LocalVariableTableAttribute::read(rdr));
                 Ok(AttributeInfo::LocalVariableTable(Box::new(local_variable_table)))
+            }
+            "StackMapTable" => {
+                let stack_map_table = try!(StackMapTableAttribute::read(rdr));
+                Ok(AttributeInfo::StackMapTable(Box::new(stack_map_table)))
             }
             attr_name => {
                 println!("UNKNOWN ATTRIBUTE {}", attr_name);
