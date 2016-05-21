@@ -20,6 +20,8 @@ mod bootstrap_methods;
 pub use self::bootstrap_methods::*;
 mod constant_value;
 pub use self::constant_value::*;
+mod exceptions;
+pub use self::exceptions::*;
 
 #[derive(Debug)]
 pub struct Attributes {
@@ -55,6 +57,7 @@ pub enum AttributeInfo {
     BootstrapMethods(Box<BootstrapMethodsAttribute>),
     ConstantValue(Box<ConstantValueAttribute>),
     Code(Box<CodeAttribute>),
+    Exceptions(Box<ExceptionsAttribute>),
     Raw(Box<Vec<u8>>),
 }
 
@@ -80,10 +83,6 @@ impl AttributeInfo {
                 let source_file = try!(SourceFileAttribute::read(rdr));
                 Ok(AttributeInfo::SourceFile(Box::new(source_file)))
             }
-            "Code" => {
-                let code = try!(CodeAttribute::read(rdr, constant_pool));
-                Ok(AttributeInfo::Code(Box::new(code)))
-            }
             "InnerClasses" => {
                 let inner_classes = try!(InnerClassesAttribute::read(rdr));
                 Ok(AttributeInfo::InnerClasses(Box::new(inner_classes)))
@@ -104,6 +103,14 @@ impl AttributeInfo {
             "ConstantValue" => {
                 let constant_value = try!(ConstantValueAttribute::read(rdr));
                 Ok(AttributeInfo::ConstantValue(Box::new(constant_value)))
+            }
+            "Code" => {
+                let code = try!(CodeAttribute::read(rdr, constant_pool));
+                Ok(AttributeInfo::Code(Box::new(code)))
+            }
+            "Exceptions" => {
+                let exceptions = try!(ExceptionsAttribute::read(rdr));
+                Ok(AttributeInfo::Exceptions(Box::new(exceptions)))
             }
             _ => {
                 let mut info: Vec<u8> = vec![];
