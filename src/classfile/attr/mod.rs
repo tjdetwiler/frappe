@@ -18,6 +18,8 @@ mod source_debug_extension;
 pub use self::source_debug_extension::*;
 mod bootstrap_methods;
 pub use self::bootstrap_methods::*;
+mod constant_value;
+pub use self::constant_value::*;
 
 #[derive(Debug)]
 pub struct Attributes {
@@ -51,6 +53,7 @@ pub enum AttributeInfo {
     EnclosingMethod(Box<EnclosingMethodAttribute>),
     SourceDebugExtension(Box<SourceDebugExtensionAttribute>),
     BootstrapMethods(Box<BootstrapMethodsAttribute>),
+    ConstantValue(Box<ConstantValueAttribute>),
     Code(Box<CodeAttribute>),
     Raw(Box<Vec<u8>>),
 }
@@ -97,6 +100,10 @@ impl AttributeInfo {
             "BootstrapMethods" => {
                 let bootstrap_methods = try!(BootstrapMethodsAttribute::read(rdr));
                 Ok(AttributeInfo::BootstrapMethods(Box::new(bootstrap_methods)))
+            }
+            "ConstantValue" => {
+                let constant_value = try!(ConstantValueAttribute::read(rdr));
+                Ok(AttributeInfo::ConstantValue(Box::new(constant_value)))
             }
             _ => {
                 let mut info: Vec<u8> = vec![];
