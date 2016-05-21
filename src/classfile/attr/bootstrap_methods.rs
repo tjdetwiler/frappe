@@ -5,8 +5,8 @@ use classfile::error::Result;
 
 #[derive(Debug)]
 pub struct BootstrapMethodInfo {
-    bootstrap_method_ref: u16,
-    bootstrap_arguments: Vec<u16>,
+    pub bootstrap_method_ref: u16,
+    pub bootstrap_arguments: Vec<u16>,
 }
 
 impl BootstrapMethodInfo {

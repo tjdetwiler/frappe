@@ -5,8 +5,8 @@ use classfile::error::Result;
 
 #[derive(Debug)]
 pub struct LineNumberTableEntry {
-    start_pc: u16,
-    line_number: u16,
+    pub start_pc: u16,
+    pub line_number: u16,
 }
 
 impl LineNumberTableEntry {
@@ -22,7 +22,7 @@ impl LineNumberTableEntry {
 
 #[derive(Debug)]
 pub struct LineNumberTableAttribute {
-    line_number_table: Vec<LineNumberTableEntry>,
+    pub line_number_table: Vec<LineNumberTableEntry>,
 }
 
 impl LineNumberTableAttribute {

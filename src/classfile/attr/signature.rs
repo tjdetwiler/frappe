@@ -5,7 +5,7 @@ use classfile::error::Result;
 
 #[derive(Debug)]
 pub struct SignatureAttribute {
-    signature_index: u16,
+    pub signature_index: u16,
 }
 
 impl SignatureAttribute {

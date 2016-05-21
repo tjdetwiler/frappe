@@ -5,7 +5,7 @@ use classfile::error::Result;
 
 #[derive(Debug)]
 pub struct ExceptionsAttribute {
-    exception_index_table: Vec<u16>,
+    pub exception_index_table: Vec<u16>,
 }
 
 impl ExceptionsAttribute {

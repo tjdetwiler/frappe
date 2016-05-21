@@ -5,7 +5,7 @@ use classfile::error::{Error, Result};
 
 #[derive(Debug)]
 pub struct StackMapTableAttribute {
-    entries: Vec<StackMapFrame>,
+    pub entries: Vec<StackMapFrame>,
 }
 
 impl StackMapTableAttribute {
@@ -59,7 +59,7 @@ impl VerificationTypeInfo {
 
 #[derive(Debug)]
 pub struct ObjectVariableInfo {
-    cpool_index: u16,
+    pub cpool_index: u16,
 }
 
 impl ObjectVariableInfo {
@@ -71,7 +71,7 @@ impl ObjectVariableInfo {
 
 #[derive(Debug)]
 pub struct UninitializedVariableInfo {
-    offset: u16,
+    pub offset: u16,
 }
 
 impl UninitializedVariableInfo {
@@ -94,13 +94,13 @@ pub enum StackMapFrame {
 
 #[derive(Debug)]
 pub struct SameFrame {
-    frame_type: u8,
+     pub frame_type: u8,
 }
 
 #[derive(Debug)]
 pub struct SameLocals1StackItemFrame {
-    frame_type: u8,
-    stack: [VerificationTypeInfo; 1],
+    pub frame_type: u8,
+    pub stack: [VerificationTypeInfo; 1],
 }
 
 impl SameLocals1StackItemFrame {
@@ -115,8 +115,8 @@ impl SameLocals1StackItemFrame {
 
 #[derive(Debug)]
 pub struct SameLocals1StackItemFrameExtended {
-    offset_delta: u16,
-    stack: [VerificationTypeInfo; 1],
+    pub offset_delta: u16,
+    pub stack: [VerificationTypeInfo; 1],
 }
 
 impl SameLocals1StackItemFrameExtended {
@@ -132,8 +132,8 @@ impl SameLocals1StackItemFrameExtended {
 
 #[derive(Debug)]
 pub struct ChopFrame {
-    frame_type: u8,
-    offset_delta: u16,
+    pub frame_type: u8,
+    pub offset_delta: u16,
 }
 
 impl ChopFrame {
@@ -148,7 +148,7 @@ impl ChopFrame {
 
 #[derive(Debug)]
 pub struct SameFrameExtended {
-    offset_delta: u16,
+    pub offset_delta: u16,
 }
 
 impl SameFrameExtended {
@@ -160,9 +160,9 @@ impl SameFrameExtended {
 
 #[derive(Debug)]
 pub struct AppendFrame {
-    frame_type: u8,
-    offset_delta: u16,
-    locals: Vec<VerificationTypeInfo>,
+    pub frame_type: u8,
+    pub offset_delta: u16,
+    pub locals: Vec<VerificationTypeInfo>,
 }
 
 impl AppendFrame {
@@ -184,9 +184,9 @@ impl AppendFrame {
 
 #[derive(Debug)]
 pub struct FullFrame {
-    offset_delta: u16,
-    locals: Vec<VerificationTypeInfo>,
-    stack: Vec<VerificationTypeInfo>,
+    pub offset_delta: u16,
+    pub locals: Vec<VerificationTypeInfo>,
+    pub stack: Vec<VerificationTypeInfo>,
 }
 
 impl FullFrame {

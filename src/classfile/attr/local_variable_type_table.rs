@@ -5,7 +5,7 @@ use classfile::error::Result;
 
 #[derive(Debug)]
 pub struct LocalVariableTypeTableAttribute {
-    local_variable_type_table: Vec<LocalVariableTypeTableEntry>,
+    pub local_variable_type_table: Vec<LocalVariableTypeTableEntry>,
 }
 
 impl LocalVariableTypeTableAttribute {
@@ -22,11 +22,11 @@ impl LocalVariableTypeTableAttribute {
 
 #[derive(Debug)]
 pub struct LocalVariableTypeTableEntry {
-    start_pc: u16,
-    length: u16,
-    name_index: u16,
-    signature_index: u16,
-    index: u16,
+    pub start_pc: u16,
+    pub length: u16,
+    pub name_index: u16,
+    pub signature_index: u16,
+    pub index: u16,
 }
 
 impl LocalVariableTypeTableEntry {

@@ -5,7 +5,7 @@ use classfile::error::Result;
 
 #[derive(Debug)]
 pub struct ConstantValueAttribute {
-    constantvalue_index: u16,
+    pub constantvalue_index: u16,
 }
 
 impl ConstantValueAttribute {
