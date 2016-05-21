@@ -9,7 +9,7 @@ pub use self::decode::*;
 
 pub struct Options<'a> {
     pub verbose: bool,
-    pub constant_pool: &'a cp::ConstantPool
+    pub constant_pool: &'a cp::ConstantPool,
 }
 
 pub trait Disassemble {
@@ -55,12 +55,10 @@ impl Disassemble for ClassFile {
 impl Disassemble for cp::Tag {
     fn pretty_print(&self, _: &Options) -> String {
         match *self {
-            cp::Tag::Methodref(cp::MethodrefTag{
-                ref class_index, ref name_and_type_index}) => {
+            cp::Tag::Methodref(cp::MethodrefTag { ref class_index, ref name_and_type_index }) => {
                 format!("Methodref\t\t#{}.#{}", class_index, name_and_type_index)
             }
-            cp::Tag::Fieldref(cp::FieldrefTag{
-                ref class_index, ref name_and_type_index}) => {
+            cp::Tag::Fieldref(cp::FieldrefTag { ref class_index, ref name_and_type_index }) => {
                 format!("Fieldref\t\t\t#{}.#{}", class_index, name_and_type_index)
             }
             cp::Tag::String(cp::StringTag { ref string_index }) => {
@@ -70,8 +68,7 @@ impl Disassemble for cp::Tag {
                 format!("Class\t\t\t#{}", name_index)
             }
             cp::Tag::Utf8(ref string) => format!("Utf8\t\t\t{}", string),
-            cp::Tag::NameAndType(cp::NameAndTypeTag{
-                ref name_index, ref descriptor_index}) => {
+            cp::Tag::NameAndType(cp::NameAndTypeTag { ref name_index, ref descriptor_index }) => {
                 format!("NameAndType\t\t#{}:#{}", name_index, descriptor_index)
             }
             _ => format!("{:?}", self),

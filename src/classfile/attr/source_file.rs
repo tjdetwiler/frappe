@@ -13,4 +13,3 @@ impl SourceFileAttribute {
         Ok(SourceFileAttribute { sourcefile_index: sourcefile_index })
     }
 }
-

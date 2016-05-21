@@ -40,7 +40,9 @@ pub struct CodeAttribute {
 }
 
 impl CodeAttribute {
-    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> io::Result<CodeAttribute> {
+    pub fn read<T: io::Read>(rdr: &mut T,
+                             constant_pool: &cp::ConstantPool)
+                             -> io::Result<CodeAttribute> {
         let max_stack = try!(read_u16(rdr));
         let max_locals = try!(read_u16(rdr));
         let code_length = try!(read_u32(rdr));
@@ -65,4 +67,3 @@ impl CodeAttribute {
         })
     }
 }
-

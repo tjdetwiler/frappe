@@ -36,12 +36,12 @@ impl InnerClassInfo {
             outer_class_info_index: outer_class_info_index,
             inner_name_index: inner_name_index,
             inner_class_access_flags:
-            InnerClassAccessFlags::from_bits_truncate(inner_class_access_flags)
+                InnerClassAccessFlags::from_bits_truncate(inner_class_access_flags),
         })
     }
 }
 
 pub struct InnerClassesAttribute {
     pub number_of_classes: u16,
-    pub classes: Vec<InnerClassInfo>
+    pub classes: Vec<InnerClassInfo>,
 }
