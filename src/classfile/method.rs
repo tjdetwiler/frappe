@@ -112,9 +112,7 @@ pub struct MethodInfo {
 }
 
 impl MethodInfo {
-    pub fn read<T: io::Read>(rdr: &mut T,
-                             constant_pool: &cp::ConstantPool)
-                             -> Result<MethodInfo> {
+    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> Result<MethodInfo> {
         let access_flags = try!(read_u16(rdr));
         let name_index = try!(read_u16(rdr));
         let descriptor_index = try!(read_u16(rdr));

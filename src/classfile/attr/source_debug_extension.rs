@@ -9,7 +9,9 @@ pub struct SourceDebugExtensionAttribute {
 }
 
 impl SourceDebugExtensionAttribute {
-    pub fn read<T: io::Read>(rdr: &mut T, attr_length: u32) -> Result<SourceDebugExtensionAttribute> {
+    pub fn read<T: io::Read>(rdr: &mut T,
+                             attr_length: u32)
+                             -> Result<SourceDebugExtensionAttribute> {
         let mut debug_extension: Vec<u8> = vec![];
         for _ in 0..attr_length {
             let byte = try!(read_u8(rdr));

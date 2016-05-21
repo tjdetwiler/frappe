@@ -25,9 +25,7 @@ pub struct Attributes {
 }
 
 impl Attributes {
-    pub fn read<T: io::Read>(rdr: &mut T,
-                             constant_pool: &cp::ConstantPool)
-                             -> Result<Attributes> {
+    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> Result<Attributes> {
         let attributes_count = try!(read_u16(rdr));
         let mut attributes: Vec<AttributeInfo> = vec![];
         for _ in 0..attributes_count {
@@ -92,8 +90,8 @@ impl AttributeInfo {
                 Ok(AttributeInfo::EnclosingMethod(Box::new(enclosing_method)))
             }
             "SourceDebugExtension" => {
-                let source_debug_extension = try!(SourceDebugExtensionAttribute::read(rdr,
-                                                                                      attribute_length));
+                let source_debug_extension =
+                    try!(SourceDebugExtensionAttribute::read(rdr, attribute_length));
                 Ok(AttributeInfo::SourceDebugExtension(Box::new(source_debug_extension)))
             }
             "BootstrapMethods" => {

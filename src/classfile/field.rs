@@ -123,9 +123,7 @@ impl FieldInfo {
     /// Constructs a [`FieldInfo`]
     /// (https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.5)
     /// structure from a byte stream containing classfile data.
-    pub fn read<T: io::Read>(rdr: &mut T,
-                             constant_pool: &cp::ConstantPool)
-                             -> Result<FieldInfo> {
+    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> Result<FieldInfo> {
         let access_flags = try!(read_u16(rdr));
         let name_index = try!(read_u16(rdr));
         let descriptor_index = try!(read_u16(rdr));

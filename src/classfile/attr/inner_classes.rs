@@ -55,8 +55,6 @@ impl InnerClassesAttribute {
             let inner_class_info = try!(InnerClassInfo::read(rdr));
             inner_classes.push(inner_class_info);
         }
-        Ok(InnerClassesAttribute {
-            classes: inner_classes
-        })
+        Ok(InnerClassesAttribute { classes: inner_classes })
     }
 }
