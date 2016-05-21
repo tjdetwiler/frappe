@@ -10,6 +10,7 @@ pub enum Error {
     IOError,
     MalformedUtf8String,
     InvalidConstantPoolTag(u8),
+    InvalidTargetTypeTag(u8),
 }
 
 impl fmt::Display for Error {
