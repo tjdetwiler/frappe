@@ -18,6 +18,7 @@ bitflags! {
     }
 }
 
+#[derive(Debug)]
 pub struct InnerClassInfo {
     pub inner_class_info_index: u16,
     pub outer_class_info_index: u16,
@@ -41,7 +42,21 @@ impl InnerClassInfo {
     }
 }
 
+#[derive(Debug)]
 pub struct InnerClassesAttribute {
-    pub number_of_classes: u16,
     pub classes: Vec<InnerClassInfo>,
+}
+
+impl InnerClassesAttribute {
+    pub fn read<T: io::Read>(rdr: &mut T) -> Result<InnerClassesAttribute> {
+        let number_of_classes = try!(read_u16(rdr));
+        let mut inner_classes: Vec<InnerClassInfo> = vec![];
+        for _ in 0..number_of_classes {
+            let inner_class_info = try!(InnerClassInfo::read(rdr));
+            inner_classes.push(inner_class_info);
+        }
+        Ok(InnerClassesAttribute {
+            classes: inner_classes
+        })
+    }
 }

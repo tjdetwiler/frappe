@@ -42,6 +42,7 @@ impl Deref for Attributes {
 #[derive(Debug)]
 pub enum AttributeInfo {
     SourceFile(Box<SourceFileAttribute>),
+    InnerClasses(Box<InnerClassesAttribute>),
     Code(Box<CodeAttribute>),
     Raw(Box<Vec<u8>>),
 }
