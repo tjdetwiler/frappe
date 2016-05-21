@@ -36,6 +36,8 @@ mod local_variable_type_table;
 pub use self::local_variable_type_table::*;
 mod annotation_default;
 pub use self::annotation_default::*;
+mod method_parameters;
+pub use self::method_parameters::*;
 
 #[derive(Debug)]
 pub struct Attributes {
@@ -79,6 +81,7 @@ pub enum AttributeInfo {
     Synthetic,
     Signature(Box<SignatureAttribute>),
     AnnotationDefault(Box<AnnotationDefaultAttribute>),
+    MethodParameters(Box<MethodParametersAttribute>),
     Raw(Box<Vec<u8>>),
 }
 
@@ -157,6 +160,10 @@ impl AttributeInfo {
             "AnnotationDefault" => {
                 let annotation_default = try!(AnnotationDefaultAttribute::read(rdr));
                 Ok(AttributeInfo::AnnotationDefault(Box::new(annotation_default)))
+            }
+            "MethodParameters" => {
+                let method_parameters = try!(MethodParametersAttribute::read(rdr));
+                Ok(AttributeInfo::MethodParameters(Box::new(method_parameters)))
             }
             attr_name => {
                 println!("UNKNOWN ATTRIBUTE {}", attr_name);
