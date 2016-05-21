@@ -11,7 +11,7 @@ pub enum ElementValue {
     EnumConstValue(EnumConstValue),
     ClassInfo(u16),
     AnnotationValue(Box<Annotation>),
-    ArrayValue(Box<ArrayValue>)
+    ArrayValue(Box<ArrayValue>),
 }
 
 impl ElementValue {
@@ -38,7 +38,7 @@ impl ElementValue {
                 let array_value = try!(ArrayValue::read(rdr));
                 Ok(ElementValue::ArrayValue(Box::new(array_value)))
             }
-            _ => Err(Error::InvalidElementValueTag(tag))
+            _ => Err(Error::InvalidElementValueTag(tag)),
         }
     }
 }
@@ -64,7 +64,6 @@ impl ElementValuePair {
 pub struct ConstantValue {
     pub tag: u8,
     pub const_value_index: u16,
-
 }
 
 impl ConstantValue {
@@ -90,9 +89,7 @@ impl ArrayValue {
             let element_value = try!(ElementValue::read(rdr));
             values.push(element_value);
         }
-        Ok(ArrayValue {
-            values: values,
-        })
+        Ok(ArrayValue { values: values })
     }
 }
 

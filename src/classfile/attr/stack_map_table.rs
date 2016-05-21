@@ -94,7 +94,7 @@ pub enum StackMapFrame {
 
 #[derive(Debug)]
 pub struct SameFrame {
-     pub frame_type: u8,
+    pub frame_type: u8,
 }
 
 #[derive(Debug)]
