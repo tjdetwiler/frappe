@@ -2,6 +2,7 @@
 name = "frappe"
 version = "0.1.0"
 authors = ["Tim Detwiler <timdetwiler@gmail.com>"]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 byteorder = "^0.5"
