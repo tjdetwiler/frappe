@@ -26,13 +26,13 @@ fn test_load_hello_world_class() {
 
     // Constant pool entries
     assert_eq!(
-        Tag::Methodref(cp::MethodrefTag {
+        Tag::Methodref(cp::TypedEntityTag {
             class_index: 6,
             name_and_type_index: 15
         }),
         classfile.constant_pool[1]);
     assert_eq!(
-        Tag::Fieldref(cp::FieldrefTag {
+        Tag::Fieldref(cp::TypedEntityTag {
             class_index: 16,
             name_and_type_index: 17
         }),
@@ -43,7 +43,7 @@ fn test_load_hello_world_class() {
         }),
         classfile.constant_pool[3]);
     assert_eq!(
-        Tag::Methodref(cp::MethodrefTag {
+        Tag::Methodref(cp::TypedEntityTag {
             class_index: 19,
             name_and_type_index: 20
         }),

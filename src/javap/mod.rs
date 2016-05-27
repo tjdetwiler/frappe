@@ -77,8 +77,10 @@ impl Disassemble for ClassFile {
         write!(fmt.out, "{}{} {}", access_mode, class_type, class_name);
         if let Some(super_class) = self.super_class() {
             let super_class_name = self.constant_pool.get_string(super_class.name_index).unwrap();
-            let super_class_name = super_class_name.replace("/", ".");
-            write!(fmt.out, " extends {} ", super_class_name);
+            if !(super_class_name == "java/lang/Object") {
+                let super_class_name = super_class_name.replace("/", ".");
+                write!(fmt.out, " extends {} ", super_class_name);
+            }
         }
         if opts.verbose {
             write!(fmt.out, "\n");
@@ -94,6 +96,32 @@ impl Disassemble for ClassFile {
     }
 }
 
+fn generate_typed_entity_comment_string(cp: &cp::ConstantPool,
+                                        entity: &cp::TypedEntityTag)
+                                        -> String {
+    let class_info = cp[entity.class_index]
+        .as_class()
+        .unwrap();
+    let class_name = cp[class_info.name_index]
+        .as_utf8()
+        .unwrap();
+    let entity_info = cp[entity.name_and_type_index]
+        .as_name_and_type()
+        .unwrap();
+    let method_name = cp[entity_info.name_index]
+        .as_utf8()
+        .unwrap();
+    let method_name = match method_name.as_ref() {
+        "<init>" | "<clinit>" => format!("\"{}\"", method_name),
+        _ => format!("{}", method_name),
+    };
+    let method_type = cp[entity_info.descriptor_index]
+        .as_utf8()
+        .unwrap();
+    format!("{}.{}:{}", class_name, method_name, method_type)
+
+}
+
 impl Disassemble for cp::Tag {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         let mut tag_string = "";
@@ -105,44 +133,24 @@ impl Disassemble for cp::Tag {
                 arg_string = format!("#{}.#{}",
                                      method_tag.class_index,
                                      method_tag.name_and_type_index);
-                let class_info = opts.constant_pool[method_tag.class_index]
-                    .as_class()
-                    .unwrap();
-                let method_info = opts.constant_pool[method_tag.name_and_type_index]
-                    .as_name_and_type()
-                    .unwrap();
-                let class_name = opts.constant_pool[class_info.name_index]
-                    .as_utf8()
-                    .unwrap();
-                let method_name = opts.constant_pool[method_info.name_index]
-                    .as_utf8()
-                    .unwrap();
-                let method_type = opts.constant_pool[method_info.descriptor_index]
-                    .as_utf8()
-                    .unwrap();
-                comment_string = Some(format!("{}.{}:{}", class_name, method_name, method_type));
+                comment_string = Some(generate_typed_entity_comment_string(opts.constant_pool,
+                                                                           method_tag));
             }
             cp::Tag::Fieldref(ref field_tag) => {
                 tag_string = "Fieldref";
                 arg_string = format!("#{}.#{}",
                                      field_tag.class_index,
                                      field_tag.name_and_type_index);
-                let class_info = opts.constant_pool[field_tag.class_index]
-                    .as_class()
-                    .unwrap();
-                let method_info = opts.constant_pool[field_tag.name_and_type_index]
-                    .as_name_and_type()
-                    .unwrap();
-                let class_name = opts.constant_pool[class_info.name_index]
-                    .as_utf8()
-                    .unwrap();
-                let method_name = opts.constant_pool[method_info.name_index]
-                    .as_utf8()
-                    .unwrap();
-                let method_type = opts.constant_pool[method_info.descriptor_index]
-                    .as_utf8()
-                    .unwrap();
-                comment_string = Some(format!("{}.{}:{}", class_name, method_name, method_type));
+                comment_string = Some(generate_typed_entity_comment_string(opts.constant_pool,
+                                                                           field_tag));
+            }
+            cp::Tag::InterfaceMethodref(ref method_tag) => {
+                tag_string = "InterfaceMethodref";
+                arg_string = format!("#{}.#{}",
+                                     method_tag.class_index,
+                                     method_tag.name_and_type_index);
+                comment_string = Some(generate_typed_entity_comment_string(opts.constant_pool,
+                                                                           method_tag));
             }
             cp::Tag::String(ref string_tag) => {
                 tag_string = "String";
@@ -172,6 +180,10 @@ impl Disassemble for cp::Tag {
                     .as_utf8()
                     .unwrap();
                 comment_string = Some(format!("{}:{}", method_name, method_type));
+            }
+            cp::Tag::Integer(val) => {
+                tag_string = "Integer";
+                arg_string = format!("{}", val);
             }
             _ => {}
         }
@@ -250,21 +262,24 @@ impl Disassemble for AttributeInfo {
 impl Disassemble for method::MethodInfo {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         write!(fmt.out, "  ");
-        if self.access_flags.is_public() {
-            write!(fmt.out, "public ");
+        let access_mode = if self.access_flags.is_public() {
+            "public"
         } else if self.access_flags.is_private() {
-            write!(fmt.out, "private ");
+            "private"
         } else if self.access_flags.is_protected() {
-            write!(fmt.out, "protected ");
+            "protected"
         } else {
-            write!(fmt.out, "/* package */ ");
-        }
-        if self.access_flags.is_static() {
-            write!(fmt.out, "static ");
-        }
+            // package access
+            ""
+        };
+        let scope = if self.access_flags.is_static() {
+            " static"
+        } else {
+            ""
+        };
+        let method_name = opts.constant_pool.get_string(self.name_index).unwrap();
+        write!(fmt.out, "{}{} {};\n", access_mode, scope, method_name);
         let method_descriptor = opts.constant_pool.get_string(self.descriptor_index);
-        let method_name = opts.constant_pool.get_string(self.name_index);
-        write!(fmt.out, "{};\n", method_name.unwrap());
         if opts.verbose {
             write!(fmt.out, "    descriptor: {}\n", method_descriptor.unwrap());
             write!(fmt.out, "    flags: {:?}\n", self.access_flags);

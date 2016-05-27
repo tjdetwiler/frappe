@@ -60,19 +60,7 @@ pub struct ClassTag {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct FieldrefTag {
-    pub class_index: u16,
-    pub name_and_type_index: u16,
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct MethodrefTag {
-    pub class_index: u16,
-    pub name_and_type_index: u16,
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct InterfaceMethodrefTag {
+pub struct TypedEntityTag {
     pub class_index: u16,
     pub name_and_type_index: u16,
 }
@@ -91,13 +79,11 @@ pub struct NameAndTypeTag {
 #[derive(Debug, Eq, PartialEq)]
 pub enum Tag {
     Class(ClassTag),
-    Fieldref(FieldrefTag),
-    Methodref(MethodrefTag),
-    InterfaceMethodref(InterfaceMethodrefTag),
+    Fieldref(TypedEntityTag),
+    Methodref(TypedEntityTag),
+    InterfaceMethodref(TypedEntityTag),
     String(StringTag),
-    Integer {
-        bytes: u32,
-    },
+    Integer(i32),
     Float {
         bytes: u32,
     },
@@ -156,7 +142,7 @@ impl Tag {
             }
             CONSTANT_INTEGER => {
                 let bytes = try!(read_u32(rdr));
-                Ok(Tag::Integer { bytes: bytes })
+                Ok(Tag::Integer(bytes as i32))
             }
             CONSTANT_FLOAT => {
                 let bytes = try!(read_u32(rdr));
@@ -189,7 +175,7 @@ impl Tag {
             CONSTANT_FIELDREF => {
                 let class_index = try!(read_u16(rdr));
                 let name_and_type_index = try!(read_u16(rdr));
-                Ok(Tag::Fieldref(FieldrefTag {
+                Ok(Tag::Fieldref(TypedEntityTag {
                     class_index: class_index,
                     name_and_type_index: name_and_type_index,
                 }))
@@ -197,7 +183,7 @@ impl Tag {
             CONSTANT_METHODREF => {
                 let class_index = try!(read_u16(rdr));
                 let name_and_type_index = try!(read_u16(rdr));
-                Ok(Tag::Methodref(MethodrefTag {
+                Ok(Tag::Methodref(TypedEntityTag {
                     class_index: class_index,
                     name_and_type_index: name_and_type_index,
                 }))
@@ -205,7 +191,7 @@ impl Tag {
             CONSTANT_INTERFACE_METHODREF => {
                 let class_index = try!(read_u16(rdr));
                 let name_and_type_index = try!(read_u16(rdr));
-                Ok(Tag::InterfaceMethodref(InterfaceMethodrefTag {
+                Ok(Tag::InterfaceMethodref(TypedEntityTag {
                     class_index: class_index,
                     name_and_type_index: name_and_type_index,
                 }))
