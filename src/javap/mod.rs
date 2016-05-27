@@ -60,26 +60,30 @@ impl Disassemble for ClassFile {
         }
         let this_class = self.this_class();
         let class_name = self.constant_pool.get_string(this_class.name_index).unwrap();
-        if self.access_flags.is_public() {
-            write!(fmt.out, "public ");
-        }
-        if self.access_flags.is_interface() {
-            write!(fmt.out, "interface");
-        } else if self.access_flags.is_annotation() {
-            write!(fmt.out, "@interface");
+        let class_name = class_name.replace("/", ".");
+        let access_mode =  if self.access_flags.is_public() {
+            "public "
         } else {
-            write!(fmt.out, "class");
-        }
-        write!(fmt.out, " {} ", class_name.replace("/", "."));
+            ""
+        };
+        let class_type = if self.access_flags.is_interface() {
+            "interface"
+        } else if self.access_flags.is_annotation() {
+            "@interface"
+        } else {
+            "class"
+        };
+        write!(fmt.out, "{}{} {}", access_mode, class_type, class_name); 
         if let Some(super_class) = self.super_class() {
             let super_class_name = self.constant_pool.get_string(super_class.name_index).unwrap();
-            write!(fmt.out, "extends {} ", super_class_name.replace("/", "."));
+            let super_class_name = super_class_name.replace("/", ".");
+            write!(fmt.out, " extends {} ", super_class_name);
         }
         if opts.verbose {
             write!(fmt.out, "\n");
             write!(fmt.out, "  minor version: {}\n", self.minor_version);
             write!(fmt.out, "  major version: {}\n", self.major_version);
-            write!(fmt.out, "  access flags: {}\n", self.access_flags);
+            write!(fmt.out, "  flags: {}\n", self.access_flags);
             self.constant_pool.pretty_print(fmt, opts);
         }
         write!(fmt.out, "{{\n");
@@ -90,44 +94,90 @@ impl Disassemble for ClassFile {
 }
 
 impl Disassemble for cp::Tag {
-    fn pretty_print(&self, fmt: &mut Formatter, _: &Options) -> io::Result<()> {
+    fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
+        let mut tag_string = "";
+        let mut arg_string = String::new();
+        let mut comment_string: Option<String> = None;
         match *self {
-            cp::Tag::Methodref(cp::MethodrefTag { ref class_index, ref name_and_type_index }) => {
-                write!(fmt.out,
-                       "Methodref\t\t#{}.#{}", class_index, name_and_type_index);
+            cp::Tag::Methodref(ref method_tag) => {
+                tag_string = "Methodref";
+                arg_string = format!("#{}.#{}", method_tag.class_index, method_tag.name_and_type_index);
+                let class_info = opts.constant_pool[method_tag.class_index]
+                    .as_class().unwrap();
+                let method_info = opts.constant_pool[method_tag.name_and_type_index]
+                    .as_name_and_type().unwrap();
+                let class_name = opts.constant_pool[class_info.name_index]
+                    .as_utf8().unwrap();
+                let method_name = opts.constant_pool[method_info.name_index]
+                    .as_utf8().unwrap();
+                let method_type = opts.constant_pool[method_info.descriptor_index]
+                    .as_utf8().unwrap();
+                comment_string = Some(format!("{}.{}:{}", class_name, method_name, method_type));
             }
-            cp::Tag::Fieldref(cp::FieldrefTag { ref class_index, ref name_and_type_index }) => {
-                write!(fmt.out,
-                       "Fieldref\t\t\t#{}.#{}", class_index, name_and_type_index);
+            cp::Tag::Fieldref(ref field_tag) => {
+                tag_string = "Fieldref";
+                arg_string = format!("#{}.#{}", field_tag.class_index, field_tag.name_and_type_index);
+                let class_info = opts.constant_pool[field_tag.class_index]
+                    .as_class().unwrap();
+                let method_info = opts.constant_pool[field_tag.name_and_type_index]
+                    .as_name_and_type().unwrap();
+                let class_name = opts.constant_pool[class_info.name_index]
+                    .as_utf8().unwrap();
+                let method_name = opts.constant_pool[method_info.name_index]
+                    .as_utf8().unwrap();
+                let method_type = opts.constant_pool[method_info.descriptor_index]
+                    .as_utf8().unwrap();
+                comment_string = Some(format!("{}.{}:{}", class_name, method_name, method_type));
             }
-            cp::Tag::String(cp::StringTag { ref string_index }) => {
-                write!(fmt.out,
-                       "String\t\t\t#{}", string_index);
+            cp::Tag::String(ref string_tag) => {
+                tag_string = "String";
+                arg_string = format!("#{}", string_tag.string_index);
+                let string = opts.constant_pool[string_tag.string_index].as_utf8().unwrap();
+                comment_string = Some(format!("{}", string));
             }
-            cp::Tag::Class(cp::ClassTag { ref name_index }) => {
-                write!(fmt.out,
-                       "Class\t\t\t#{}", name_index);
+            cp::Tag::Class(ref class_tag) => {
+                tag_string = "Class";
+                arg_string = format!("#{}", class_tag.name_index);
+                let class_name = opts.constant_pool[class_tag.name_index]
+                    .as_utf8().unwrap();
+                comment_string = Some(format!("{}", class_name));
             }
             cp::Tag::Utf8(ref string) => {
-                write!(fmt.out, "Utf8\t\t\t{}", string);
+                tag_string = "Utf8";
+                arg_string = format!("{}", string);
             }
-            cp::Tag::NameAndType(cp::NameAndTypeTag { ref name_index, ref descriptor_index }) => {
-                write!(fmt.out,
-                       "NameAndType\t\t#{}:#{}", name_index, descriptor_index);
+            cp::Tag::NameAndType(cp::NameAndTypeTag { name_index, descriptor_index }) => {
+                tag_string = "NameAndType";
+                arg_string = format!("#{}:#{}", name_index, descriptor_index);
+                let method_name = opts.constant_pool[name_index]
+                    .as_utf8().unwrap();
+                let method_type = opts.constant_pool[descriptor_index]
+                    .as_utf8().unwrap();
+                comment_string = Some(format!("{}:{}", method_name, method_type));
             }
-            _ => {
-                write!(fmt.out, "{:?}", self);
-            }
+            _ => { }
         }
+        let comment_string = comment_string.map_or(String::new(), |s| format!("// {}", s));
+        write!(fmt.out, "{:<19}{:<15}{}", tag_string, arg_string, comment_string);
         Ok(())
     }
 }
 
 impl Disassemble for cp::ConstantPool {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
+        let mut magnitude = 1;
+        let mut entries = self.len();
+        loop {
+            entries = entries / 10;
+            if entries == 0 {
+                break;
+            }
+            magnitude = magnitude + 1;
+        }
         write!(fmt.out, "Constant pool:\n");
         for (i, tag) in self.iter().enumerate() {
-            write!(fmt.out, "  #{} = ", i + 1);
+            let index = format!("#{}", i + 1);
+            write!(fmt.out, "  {:>1$} = ", index, magnitude + 1);
             tag.pretty_print(fmt, opts);
             write!(fmt.out, "\n");
         }

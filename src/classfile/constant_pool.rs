@@ -242,6 +242,20 @@ impl Tag {
         }
     }
 
+    pub fn as_class(&self) -> Option<&ClassTag> {
+        match *self {
+            Tag::Class(ref class) => Some(class),
+            _ => None,
+        }
+    }
+
+    pub fn as_name_and_type(&self) -> Option<&NameAndTypeTag> {
+        match *self {
+            Tag::NameAndType(ref name_and_type) => Some(name_and_type),
+            _ => None,
+        }
+    }
+
     pub fn as_utf8(&self) -> Option<&String> {
         match *self {
             Tag::Utf8(ref value) => Some(value),
