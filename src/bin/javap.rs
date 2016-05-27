@@ -1,4 +1,7 @@
 extern crate frappe;
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 
 use std::fs::File;
 
@@ -6,6 +9,7 @@ use frappe::classfile::ClassFile;
 use frappe::javap::{Disassemble, Formatter, Options};
 
 fn main() {
+    env_logger::init().unwrap();
     let verbose = true;
     let classname = "io.hcf.frappe.HelloWorld";
     let mut class_filename = classname.replace('.', "/");
@@ -17,5 +21,5 @@ fn main() {
         verbose: verbose,
         constant_pool: &class.constant_pool,
     };
-    println!("{}", class.pretty_print(&mut fmt, &opts));
+    class.pretty_print(&mut fmt, &opts);
 }

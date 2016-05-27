@@ -1,6 +1,9 @@
 extern crate byteorder;
 #[macro_use]
 extern crate bitflags;
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 
 pub mod classfile;
 pub mod util;
