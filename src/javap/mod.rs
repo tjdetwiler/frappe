@@ -55,13 +55,14 @@ impl Disassemble for ClassFile {
             if let attr::AttributeInfo::SourceFile(ref sourcefile_info) = *attribute {
                 let source_file = &self.constant_pool[sourcefile_info.sourcefile_index];
                 write!(fmt.out,
-                       "Compiled from \"{}\"\n", source_file.as_utf8().unwrap());
+                       "Compiled from \"{}\"\n",
+                       source_file.as_utf8().unwrap());
             }
         }
         let this_class = self.this_class();
         let class_name = self.constant_pool.get_string(this_class.name_index).unwrap();
         let class_name = class_name.replace("/", ".");
-        let access_mode =  if self.access_flags.is_public() {
+        let access_mode = if self.access_flags.is_public() {
             "public "
         } else {
             ""
@@ -73,7 +74,7 @@ impl Disassemble for ClassFile {
         } else {
             "class"
         };
-        write!(fmt.out, "{}{} {}", access_mode, class_type, class_name); 
+        write!(fmt.out, "{}{} {}", access_mode, class_type, class_name);
         if let Some(super_class) = self.super_class() {
             let super_class_name = self.constant_pool.get_string(super_class.name_index).unwrap();
             let super_class_name = super_class_name.replace("/", ".");
@@ -101,32 +102,46 @@ impl Disassemble for cp::Tag {
         match *self {
             cp::Tag::Methodref(ref method_tag) => {
                 tag_string = "Methodref";
-                arg_string = format!("#{}.#{}", method_tag.class_index, method_tag.name_and_type_index);
+                arg_string = format!("#{}.#{}",
+                                     method_tag.class_index,
+                                     method_tag.name_and_type_index);
                 let class_info = opts.constant_pool[method_tag.class_index]
-                    .as_class().unwrap();
+                    .as_class()
+                    .unwrap();
                 let method_info = opts.constant_pool[method_tag.name_and_type_index]
-                    .as_name_and_type().unwrap();
+                    .as_name_and_type()
+                    .unwrap();
                 let class_name = opts.constant_pool[class_info.name_index]
-                    .as_utf8().unwrap();
+                    .as_utf8()
+                    .unwrap();
                 let method_name = opts.constant_pool[method_info.name_index]
-                    .as_utf8().unwrap();
+                    .as_utf8()
+                    .unwrap();
                 let method_type = opts.constant_pool[method_info.descriptor_index]
-                    .as_utf8().unwrap();
+                    .as_utf8()
+                    .unwrap();
                 comment_string = Some(format!("{}.{}:{}", class_name, method_name, method_type));
             }
             cp::Tag::Fieldref(ref field_tag) => {
                 tag_string = "Fieldref";
-                arg_string = format!("#{}.#{}", field_tag.class_index, field_tag.name_and_type_index);
+                arg_string = format!("#{}.#{}",
+                                     field_tag.class_index,
+                                     field_tag.name_and_type_index);
                 let class_info = opts.constant_pool[field_tag.class_index]
-                    .as_class().unwrap();
+                    .as_class()
+                    .unwrap();
                 let method_info = opts.constant_pool[field_tag.name_and_type_index]
-                    .as_name_and_type().unwrap();
+                    .as_name_and_type()
+                    .unwrap();
                 let class_name = opts.constant_pool[class_info.name_index]
-                    .as_utf8().unwrap();
+                    .as_utf8()
+                    .unwrap();
                 let method_name = opts.constant_pool[method_info.name_index]
-                    .as_utf8().unwrap();
+                    .as_utf8()
+                    .unwrap();
                 let method_type = opts.constant_pool[method_info.descriptor_index]
-                    .as_utf8().unwrap();
+                    .as_utf8()
+                    .unwrap();
                 comment_string = Some(format!("{}.{}:{}", class_name, method_name, method_type));
             }
             cp::Tag::String(ref string_tag) => {
@@ -139,7 +154,8 @@ impl Disassemble for cp::Tag {
                 tag_string = "Class";
                 arg_string = format!("#{}", class_tag.name_index);
                 let class_name = opts.constant_pool[class_tag.name_index]
-                    .as_utf8().unwrap();
+                    .as_utf8()
+                    .unwrap();
                 comment_string = Some(format!("{}", class_name));
             }
             cp::Tag::Utf8(ref string) => {
@@ -150,15 +166,21 @@ impl Disassemble for cp::Tag {
                 tag_string = "NameAndType";
                 arg_string = format!("#{}:#{}", name_index, descriptor_index);
                 let method_name = opts.constant_pool[name_index]
-                    .as_utf8().unwrap();
+                    .as_utf8()
+                    .unwrap();
                 let method_type = opts.constant_pool[descriptor_index]
-                    .as_utf8().unwrap();
+                    .as_utf8()
+                    .unwrap();
                 comment_string = Some(format!("{}:{}", method_name, method_type));
             }
-            _ => { }
+            _ => {}
         }
         let comment_string = comment_string.map_or(String::new(), |s| format!("// {}", s));
-        write!(fmt.out, "{:<19}{:<15}{}", tag_string, arg_string, comment_string);
+        write!(fmt.out,
+               "{:<19}{:<15}{}",
+               tag_string,
+               arg_string,
+               comment_string);
         Ok(())
     }
 }
@@ -214,7 +236,9 @@ impl Disassemble for AttributeInfo {
             AttributeInfo::AnnotationDefault(ref annotation_default) => {
                 annotation_default.pretty_print(fmt, opts);
             }
-            AttributeInfo::Code(ref code) => { code.pretty_print(fmt, opts); }
+            AttributeInfo::Code(ref code) => {
+                code.pretty_print(fmt, opts);
+            }
             _ => {
                 write!(fmt.out, "Other");
             }
@@ -256,9 +280,14 @@ impl Disassemble for annotation::ElementValue {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         match *self {
             annotation::ElementValue::ConstantValue(ref constant_value) => {
-                write!(fmt.out, "{}#{}", constant_value.tag as char, constant_value.const_value_index);
+                write!(fmt.out,
+                       "{}#{}",
+                       constant_value.tag as char,
+                       constant_value.const_value_index);
             }
-            _ => { write!(fmt.out, "Unsupported ElementValue!"); }
+            _ => {
+                write!(fmt.out, "Unsupported ElementValue!");
+            }
         }
         Ok(())
     }
@@ -276,10 +305,11 @@ impl Disassemble for attr::AnnotationDefaultAttribute {
 
 impl Disassemble for attr::CodeAttribute {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
-        write!(fmt.out, "      stack={}, locals={}, args_size={}\n",
-                                 self.max_stack,
-                                 self.max_locals,
-                                 "TODO!");
+        write!(fmt.out,
+               "      stack={}, locals={}, args_size={}\n",
+               self.max_stack,
+               self.max_locals,
+               "TODO!");
         Ok(())
     }
 }
