@@ -1,5 +1,13 @@
 use classfile::attr::Attributes;
 
+#[derive(Debug)]
+pub struct MethodInfo {
+    pub access_flags: MethodAccessFlags,
+    pub name_index: u16,
+    pub descriptor_index: u16,
+    pub attributes: Attributes,
+}
+
 bitflags! {
     pub flags MethodAccessFlags: u16 {
         const METHOD_ACC_PUBLIC        = 0x0001,
@@ -65,12 +73,4 @@ impl MethodAccessFlags {
     pub fn is_synthetic(&self) -> bool {
         self.contains(METHOD_ACC_SYNTHETIC)
     }
-}
-
-#[derive(Debug)]
-pub struct MethodInfo {
-    pub access_flags: MethodAccessFlags,
-    pub name_index: u16,
-    pub descriptor_index: u16,
-    pub attributes: Attributes,
 }

@@ -49,7 +49,7 @@ impl<T: io::Read> ClassReader<T> {
         }
         let fields = try!(self.read_fields(&constant_pool));
         let methods = try!(self.read_methods(&constant_pool));
-        let attributes = try!(self.read_attributes(&constant_pool));
+        let attributes = try!(self.read_attributes(&constant_pool, AttributeLocation::ClassFile));
 
         Ok(ClassFile {
             magic: magic,
@@ -73,7 +73,8 @@ impl<T: io::Read> ClassReader<T> {
             let access_flags = try!(self.read_u16());
             let name_index = try!(self.read_u16());
             let descriptor_index = try!(self.read_u16());
-            let attributes = try!(self.read_attributes(constant_pool));
+            let attributes =
+                try!(self.read_attributes(constant_pool, AttributeLocation::MethodInfo));
             let entry = MethodInfo {
                 access_flags: MethodAccessFlags::from_bits_truncate(access_flags),
                 name_index: name_index,
@@ -92,7 +93,8 @@ impl<T: io::Read> ClassReader<T> {
             let access_flags = try!(self.read_u16());
             let name_index = try!(self.read_u16());
             let descriptor_index = try!(self.read_u16());
-            let attributes: Attributes = try!(self.read_attributes(constant_pool));
+            let attributes: Attributes = try!(self.read_attributes(constant_pool,
+                                                                   AttributeLocation::FieldInfo));
             let entry = FieldInfo {
                 access_flags: FieldAccessFlags::from_bits_truncate(access_flags),
                 name_index: name_index,
@@ -212,14 +214,17 @@ impl<T: io::Read> ClassReader<T> {
         Ok(ConstantPool { pool: constant_pool })
     }
 
-    fn read_attributes(&mut self, constant_pool: &ConstantPool) -> Result<Attributes> {
+    fn read_attributes(&mut self,
+                       constant_pool: &ConstantPool,
+                       location: AttributeLocation)
+                       -> Result<Attributes> {
         let num_attributes = try!(self.read_u16());
         let mut attributes: Vec<AttributeInfo> = vec![];
         for _ in 0..num_attributes {
             let attribute_info = try!(self.read_attribute(constant_pool));
             attributes.push(attribute_info);
         }
-        Ok(Attributes { attributes: attributes })
+        Ok(Attributes::new(location, attributes))
     }
 
     fn read_attribute(&mut self, constant_pool: &ConstantPool) -> Result<AttributeInfo> {
@@ -275,7 +280,8 @@ impl<T: io::Read> ClassReader<T> {
                         let exception_info = try!(self.read_exception_info());
                         exception_table.push(exception_info);
                     }
-                    let attributes = try!(self.read_attributes(constant_pool));
+                    let attributes = try!(self.read_attributes(constant_pool,
+                                                               AttributeLocation::Code));
                     Ok(AttributeInfo::Code(Box::new(CodeAttribute {
                         max_stack: max_stack,
                         max_locals: max_locals,
@@ -478,75 +484,66 @@ impl<T: io::Read> ClassReader<T> {
     fn read_stack_map_frame(&mut self) -> Result<StackMapFrame> {
         let frame_type = try!(self.read_u8());
         match frame_type {
-            0...63 => Ok(StackMapFrame::SameFrame(SameFrame { frame_type: frame_type })),
+            0...63 => Ok(StackMapFrame::SameFrame { frame_type: frame_type }),
             64...127 => {
                 let verification_type_info = try!(self.read_verification_type_info());
-                let frame = SameLocals1StackItemFrame {
+                Ok(StackMapFrame::SameLocals1StackItemFrame {
                     frame_type: frame_type,
                     stack: [verification_type_info],
-                };
-                Ok(StackMapFrame::SameLocals1StackItemFrame(frame))
+                })
             }
             247 => {
                 let offset_delta = try!(self.read_u16());
                 let verification_type_info = try!(self.read_verification_type_info());
-                let frame = SameLocals1StackItemFrameExtended {
+                Ok(StackMapFrame::SameLocals1StackItemFrameExtended {
                     offset_delta: offset_delta,
                     stack: [verification_type_info],
-                };
-                Ok(StackMapFrame::SameLocals1StackItemFrameExtended(frame))
+                })
             }
             248...250 => {
                 let offset_delta = try!(self.read_u16());
-                let frame = ChopFrame {
+                Ok(StackMapFrame::ChopFrame {
                     frame_type: frame_type,
                     offset_delta: offset_delta,
-                };
-                Ok(StackMapFrame::ChopFrame(frame))
+                })
             }
             251 => {
                 let offset_delta = try!(self.read_u16());
-                let frame = SameFrameExtended { offset_delta: offset_delta };
-                Ok(StackMapFrame::SameFrameExtended(frame))
+                Ok(StackMapFrame::SameFrameExtended { offset_delta: offset_delta })
             }
             252...254 => {
                 let offset_delta = try!(self.read_u16());
                 let num_locals = frame_type - 251;
-                let mut locals: Vec<VerificationTypeInfo> = vec![];
-                for _ in 0..num_locals {
-                    let verification_type_info = try!(self.read_verification_type_info());
-                    locals.push(verification_type_info);
-                }
-                let frame = AppendFrame {
+                let locals = try!(self.read_verification_type_infos(num_locals as u16));
+                Ok(StackMapFrame::AppendFrame {
                     frame_type: frame_type,
                     offset_delta: offset_delta,
                     locals: locals,
-                };
-                Ok(StackMapFrame::AppendFrame(frame))
+                })
             }
             255 => {
                 let offset_delta = try!(self.read_u16());
                 let number_of_locals = try!(self.read_u16());
-                let mut locals: Vec<VerificationTypeInfo> = vec![];
-                for _ in 0..number_of_locals {
-                    let verification_type_info = try!(self.read_verification_type_info());
-                    locals.push(verification_type_info);
-                }
-                let number_of_stack_items = try!(self.read_u16());
-                let mut stack: Vec<VerificationTypeInfo> = vec![];
-                for _ in 0..number_of_stack_items {
-                    let verification_type_info = try!(self.read_verification_type_info());
-                    stack.push(verification_type_info);
-                }
-                let frame = FullFrame {
+                let locals = try!(self.read_verification_type_infos(number_of_locals));
+                let number_of_stacks = try!(self.read_u16());
+                let stack = try!(self.read_verification_type_infos(number_of_stacks));
+                Ok(StackMapFrame::FullFrame {
                     offset_delta: offset_delta,
                     locals: locals,
                     stack: stack,
-                };
-                Ok(StackMapFrame::FullFrame(frame))
+                })
             }
             _ => Err(Error::InvalidStackFrameType(frame_type)),
         }
+    }
+
+    fn read_verification_type_infos(&mut self, count: u16) -> Result<Vec<VerificationTypeInfo>> {
+        let mut items: Vec<VerificationTypeInfo> = vec![];
+        for _ in 0..count {
+            let verification_type_info = try!(self.read_verification_type_info());
+            items.push(verification_type_info);
+        }
+        Ok(items)
     }
 
     fn read_verification_type_info(&mut self) -> Result<VerificationTypeInfo> {

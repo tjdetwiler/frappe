@@ -9,9 +9,8 @@ pub mod reader;
 use std::fmt;
 use std::vec::Vec;
 
-use classfile::attr::{Annotation, Attributes, AttributeInfo, BootstrapMethodInfo,
-                      EnclosingMethodAttribute, InnerClassInfo, TypeAnnotation};
-use classfile::cp::{ConstantPool, Constant};
+use classfile::attr::Attributes;
+use classfile::cp::ConstantPool;
 use classfile::field::FieldInfo;
 use classfile::method::MethodInfo;
 
@@ -65,140 +64,24 @@ impl ClassFile {
         Some(self.constant_pool[name_index].as_utf8())
     }
 
-    /// Resolves the source file attribute in this class if it exists and returns
-    /// the value. If there is no source file attribute then `None` is returned.
-    pub fn source_file(&self) -> Option<&String> {
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::SourceFile(sourcefile_index) = *attr {
-                let source_file = self.constant_pool[sourcefile_index].as_utf8();
-                return Some(source_file);
+    pub fn find_method(&self, method_name: &str) -> Option<&MethodInfo> {
+        for method in self.methods.iter() {
+            let name = self.constant_pool[method.name_index].as_utf8();
+            if name == method_name {
+                return Some(method);
             }
         }
         None
     }
 
-    /// Resolves the boostrap method attribute if it exists in this classes
-    /// attributes and returns the value. Otherwise returns `None`.
-    pub fn bootstrap_methods(&self) -> Option<&Vec<BootstrapMethodInfo>> {
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::BootstrapMethods(ref bootstrap_methods) = *attr {
-                return Some(bootstrap_methods);
+    pub fn find_field(&self, field_name: &str) -> Option<&FieldInfo> {
+        for field in self.fields.iter() {
+            let name = self.constant_pool[field.name_index].as_utf8();
+            if name == field_name {
+                return Some(field);
             }
         }
         None
-    }
-
-    /// Resolves the source debug extension attribute it if is present. Otherwise
-    /// returns `None`.
-    pub fn source_debug_extension(&self) -> Option<&Vec<u8>> {
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::SourceDebugExtension(ref extension) = *attr {
-                return Some(extension);
-            }
-        }
-        None
-    }
-
-    /// Resolves the enclosing method attribute if present. Otherwise returns
-    /// `None`.
-    pub fn enclosing_method(&self) -> Option<&EnclosingMethodAttribute> {
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::EnclosingMethod(ref enclosing_method) = *attr {
-                return Some(enclosing_method);
-            }
-        }
-        None
-    }
-
-    /// Resolves the inner classes attribute if present. Otherwise returns
-    /// `None`.
-    pub fn inner_classes(&self) -> Option<&Vec<InnerClassInfo>> {
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::InnerClasses(ref inner_classes) = *attr {
-                return Some(inner_classes);
-            }
-        }
-        None
-    }
-
-    /// Resolves the signature attribute to a UTF8 string if present. Otherwise
-    /// returns `None`.
-    pub fn signature(&self) -> Option<&String> {
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::Signature(signature_index) = *attr {
-                let signature = self.constant_pool[signature_index].as_utf8();
-                return Some(signature);
-            }
-        }
-        None
-    }
-
-    /// Resolves the RuntimeVisibleAnnotations attribute and returns the list of
-    /// annotations if it is present.
-    pub fn runtime_visible_annotations(&self) -> Option<&Vec<Annotation>> {
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::RuntimeVisibleAnnotations(ref annotations) = *attr {
-                return Some(annotations);
-            }
-        }
-        None
-    }
-
-    /// Resolves the RuntimeInvisibleAnnotations attribute and returns the list of
-    /// annotations if it is present.
-    pub fn runtime_invisible_annotations(&self) -> Option<&Vec<Annotation>> {
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::RuntimeInvisibleAnnotations(ref annotations) = *attr {
-                return Some(annotations);
-            }
-        }
-        None
-    }
-
-    /// Resolves the RuntimeVisibleTypeAnnotations attribute and returns the list of
-    /// annotations if it is present.
-    pub fn runtime_visible_type_annotations(&self) -> Option<&Vec<TypeAnnotation>> {
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::RuntimeVisibleTypeAnnotations(ref annotations) = *attr {
-                return Some(annotations);
-            }
-        }
-        None
-    }
-
-    /// Resolves the RuntimeInvisibleTypeAnnotations attribute and returns the list of
-    /// annotations if it is present.
-    pub fn runtime_invisible_type_annotations(&self) -> Option<&Vec<TypeAnnotation>> {
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::RuntimeInvisibleTypeAnnotations(ref annotations) = *attr {
-                return Some(annotations);
-            }
-        }
-        None
-    }
-
-    /// Determines if this class is synthetic (either via access flags or the
-    /// synthetic attribute).
-    pub fn is_synthetic(&self) -> bool {
-        if self.access_flags.is_synthetic() {
-            return true;
-        }
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::Synthetic = *attr {
-                return true;
-            }
-        }
-        false
-    }
-
-    /// Returns `true` if this class contains the Deprecated attribute.
-    pub fn is_deprecated(&self) -> bool {
-        for attr in self.attributes.iter() {
-            if let AttributeInfo::Deprecated = *attr {
-                return true;
-            }
-        }
-        false
     }
 }
 

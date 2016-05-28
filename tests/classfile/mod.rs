@@ -2,6 +2,7 @@ use std::fs::File;
 
 use frappe::classfile;
 use frappe::classfile::cp;
+use frappe::classfile::attr;
 use frappe::classfile::cp::Constant;
 use frappe::classfile::method;
 use frappe::classfile::field;
@@ -14,6 +15,7 @@ fn test_load_hello_world_class() {
 
     // When
     let classfile = ClassReader::new(&mut file).read_class().unwrap();
+    let cp = &classfile.constant_pool;
 
     // Then
     assert_eq!(0xcafebabe, classfile.magic);
@@ -156,6 +158,9 @@ fn test_load_hello_world_class() {
 
     // 1 attribute
     assert_eq!(1, classfile.attributes.len());
+    assert_eq!(
+        "HelloWorld.java",
+        classfile.attributes.source_file(cp).unwrap());
 }
 
 #[test]
@@ -165,6 +170,7 @@ fn should_load_point_class() {
 
     // When
     let class = ClassReader::new(&mut file).read_class().unwrap();
+    let cp = &class.constant_pool;
 
     // Then
     assert_eq!(2, class.fields.len());
@@ -178,15 +184,42 @@ fn should_load_point_class() {
     let super_class_desc = &class.constant_pool[super_class_desc];
     assert_utf8_tag("java/lang/Object", &super_class_desc);
 
-    let x_field = &class.fields[0];
-    assert_utf8_tag("x", &class.constant_pool[x_field.name_index]);
+    // Fields
+    let x_field = class.find_field("x").unwrap();
     assert_eq!(field::FIELD_ACC_PRIVATE, x_field.access_flags);
     assert_utf8_tag("I", &class.constant_pool[x_field.descriptor_index]);
 
-    let y_field = &class.fields[1];
-    assert_utf8_tag("y", &class.constant_pool[y_field.name_index]);
+    let y_field = class.find_field("y").unwrap();
     assert_eq!(field::FIELD_ACC_PRIVATE, y_field.access_flags);
     assert_utf8_tag("I", &class.constant_pool[y_field.descriptor_index]);
+
+    // Methods
+    let ctor_method = class.find_method("<init>").unwrap();
+    assert_eq!(
+        "(II)V",
+        class.constant_pool[ctor_method.descriptor_index].as_utf8());
+    assert_eq!(
+        method::METHOD_ACC_PUBLIC,
+        ctor_method.access_flags);
+    let ctor_code = ctor_method.attributes.code().unwrap();
+    assert_eq!(
+        2,
+        ctor_code.max_stack);
+    assert_eq!(
+        3,
+        ctor_code.max_locals);
+    let line_number_table = ctor_code.attributes.line_number_table().unwrap();
+    assert_eq!(
+        4,
+        line_number_table.len());
+    assert_eq!(
+        attr::LineNumberTableEntry { start_pc: 0 , line_number: 7 },
+        line_number_table[0]);
+
+    assert_eq!(1, class.attributes.len());
+    assert_eq!(
+        "Point.java", 
+        class.attributes.source_file(cp).unwrap());
 }
 
 fn assert_utf8_tag(value: &str, tag: &Constant) {
