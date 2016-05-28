@@ -263,11 +263,9 @@ impl Deref for Attributes {
 
 #[derive(Debug)]
 pub enum AttributeInfo {
-    SourceFile {
-        sourcefile_index: u16,
-    },
+    SourceFile(u16),
     InnerClasses(Vec<InnerClassInfo>),
-    EnclosingMethod(Box<EnclosingMethodAttribute>),
+    EnclosingMethod(EnclosingMethodAttribute),
     SourceDebugExtension(Vec<u8>),
     BootstrapMethods(Vec<BootstrapMethodInfo>),
     ConstantValue {
@@ -280,9 +278,7 @@ pub enum AttributeInfo {
     LocalVariableTypeTable(Vec<LocalVariableTypeTableEntry>),
     StackMapTable(Vec<StackMapFrame>),
     Synthetic,
-    Signature {
-        signature_index: u16,
-    },
+    Signature(u16),
     AnnotationDefault(ElementValue),
     MethodParameters(Vec<MethodParameterInfo>),
     RuntimeVisibleAnnotations(Vec<Annotation>),

@@ -2,7 +2,7 @@ use std::io;
 
 use classfile::ClassFile;
 use classfile::attr::*;
-use classfile::constant_pool as cp;
+use classfile::cp;
 use classfile::method;
 
 pub struct Formatter {
@@ -50,15 +50,14 @@ pub trait Disassemble {
 impl Disassemble for ClassFile {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         for attribute in self.attributes.iter() {
-            if let AttributeInfo::SourceFile { sourcefile_index } = *attribute {
+            if let AttributeInfo::SourceFile(sourcefile_index) = *attribute {
                 let source_file = &self.constant_pool[sourcefile_index];
                 write!(fmt.out,
                        "Compiled from \"{}\"\n",
-                       source_file.as_utf8().unwrap());
+                       source_file.as_utf8());
             }
         }
-        let this_class = self.this_class();
-        let class_name = self.constant_pool.get_string(this_class.name_index).unwrap();
+        let class_name = self.this_class_name();
         let class_name = class_name.replace("/", ".");
         let access_mode = if self.access_flags.is_public() {
             "public "
@@ -73,8 +72,7 @@ impl Disassemble for ClassFile {
             "class"
         };
         write!(fmt.out, "{}{} {}", access_mode, class_type, class_name);
-        if let Some(super_class) = self.super_class() {
-            let super_class_name = self.constant_pool.get_string(super_class.name_index).unwrap();
+        if let Some(super_class_name) = self.super_class_name() {
             if !(super_class_name == "java/lang/Object") {
                 let super_class_name = super_class_name.replace("/", ".");
                 write!(fmt.out, " extends {} ", super_class_name);
@@ -98,24 +96,19 @@ fn generate_typed_entity_comment_string(cp: &cp::ConstantPool,
                                         entity: &cp::TypedEntityConstant)
                                         -> String {
     let class_info = cp[entity.class_index]
-        .as_class()
-        .unwrap();
-    let class_name = cp[class_info.name_index]
-        .as_utf8()
-        .unwrap();
+        .as_class();
+    let class_name = cp[class_info]
+        .as_utf8();
     let entity_info = cp[entity.name_and_type_index]
-        .as_name_and_type()
-        .unwrap();
+        .as_name_and_type();
     let method_name = cp[entity_info.name_index]
-        .as_utf8()
-        .unwrap();
+        .as_utf8();
     let method_name = match method_name.as_ref() {
         "<init>" | "<clinit>" => format!("\"{}\"", method_name),
         _ => format!("{}", method_name),
     };
     let method_type = cp[entity_info.descriptor_index]
-        .as_utf8()
-        .unwrap();
+        .as_utf8();
     format!("{}.{}:{}", class_name, method_name, method_type)
 
 }
@@ -150,18 +143,17 @@ impl Disassemble for cp::Constant {
                 comment_string = Some(generate_typed_entity_comment_string(opts.constant_pool,
                                                                            method_tag));
             }
-            cp::Constant::String(ref string_tag) => {
+            cp::Constant::String(string_index) => {
                 tag_string = "String";
-                arg_string = format!("#{}", string_tag.string_index);
-                let string = opts.constant_pool[string_tag.string_index].as_utf8().unwrap();
+                arg_string = format!("#{}", string_index);
+                let string = opts.constant_pool[string_index].as_utf8();
                 comment_string = Some(format!("{}", string));
             }
-            cp::Constant::Class(ref class_tag) => {
+            cp::Constant::Class(name_index) => {
                 tag_string = "Class";
-                arg_string = format!("#{}", class_tag.name_index);
-                let class_name = opts.constant_pool[class_tag.name_index]
-                    .as_utf8()
-                    .unwrap();
+                arg_string = format!("#{}", name_index);
+                let class_name = opts.constant_pool[name_index]
+                    .as_utf8();
                 comment_string = Some(format!("{}", class_name));
             }
             cp::Constant::Utf8(ref string) => {
@@ -172,11 +164,9 @@ impl Disassemble for cp::Constant {
                 tag_string = "NameAndType";
                 arg_string = format!("#{}:#{}", name_index, descriptor_index);
                 let method_name = opts.constant_pool[name_index]
-                    .as_utf8()
-                    .unwrap();
+                    .as_utf8();
                 let method_type = opts.constant_pool[descriptor_index]
-                    .as_utf8()
-                    .unwrap();
+                    .as_utf8();
                 comment_string = Some(format!("{}:{}", method_name, method_type));
             }
             cp::Constant::Integer(val) => {
@@ -240,7 +230,7 @@ impl Disassemble for Attributes {
 impl Disassemble for AttributeInfo {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         match *self {
-            AttributeInfo::SourceFile { sourcefile_index } => {
+            AttributeInfo::SourceFile(sourcefile_index) => {
                 write!(fmt.out, "SourceFile");
             }
             AttributeInfo::AnnotationDefault(ref element_value) => {
@@ -278,11 +268,11 @@ impl Disassemble for method::MethodInfo {
         } else {
             ""
         };
-        let method_name = opts.constant_pool.get_string(self.name_index).unwrap();
+        let method_name = opts.constant_pool[self.name_index].as_utf8();
         write!(fmt.out, "{}{} {};\n", access_mode, scope, method_name);
-        let method_descriptor = opts.constant_pool.get_string(self.descriptor_index);
+        let method_descriptor = opts.constant_pool[self.descriptor_index].as_utf8();
         if opts.verbose {
-            write!(fmt.out, "    descriptor: {}\n", method_descriptor.unwrap());
+            write!(fmt.out, "    descriptor: {}\n", method_descriptor);
             write!(fmt.out, "    flags: {:?}\n", self.access_flags);
             for attr in self.attributes.iter() {
                 attr.pretty_print(fmt, opts);

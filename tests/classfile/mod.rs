@@ -1,8 +1,8 @@
 use std::fs::File;
 
 use frappe::classfile;
-use frappe::classfile::constant_pool as cp;
-use frappe::classfile::constant_pool::Constant;
+use frappe::classfile::cp;
+use frappe::classfile::cp::Constant;
 use frappe::classfile::method;
 use frappe::classfile::field;
 use frappe::classfile::reader::ClassReader;
@@ -20,8 +20,8 @@ fn test_load_hello_world_class() {
     assert_eq!(52, classfile.major_version);
     assert_eq!(0, classfile.minor_version);
     assert_eq!(29, classfile.constant_pool.len());
-    assert_eq!(classfile::ACC_PUBLIC |
-               classfile::ACC_SUPER,
+    assert_eq!(classfile::CLASS_ACC_PUBLIC |
+               classfile::CLASS_ACC_SUPER,
                classfile.access_flags);
 
     // Constant pool entries
@@ -38,9 +38,7 @@ fn test_load_hello_world_class() {
         }),
         classfile.constant_pool[2]);
     assert_eq!(
-        Constant::String(cp::StringConstant {
-            string_index: 18
-        }),
+        Constant::String(18),
         classfile.constant_pool[3]);
     assert_eq!(
         Constant::Methodref(cp::TypedEntityConstant {
@@ -49,14 +47,10 @@ fn test_load_hello_world_class() {
         }),
         classfile.constant_pool[4]);
     assert_eq!(
-        Constant::Class(cp::ClassConstant {
-            name_index: 21
-        }),
+        Constant::Class(21),
         classfile.constant_pool[5]);
     assert_eq!(
-        Constant::Class(cp::ClassConstant {
-            name_index: 22
-        }),
+        Constant::Class(22),
         classfile.constant_pool[6]);
     assert_utf8_tag(
         "<init>",
@@ -89,9 +83,7 @@ fn test_load_hello_world_class() {
         }),
         classfile.constant_pool[15]);
     assert_eq!(
-        Constant::Class(cp::ClassConstant {
-            name_index: 23
-        }),
+        Constant::Class(23),
         classfile.constant_pool[16]);
     assert_eq!(
         Constant::NameAndType(cp::NameAndTypeConstant {
@@ -103,9 +95,7 @@ fn test_load_hello_world_class() {
         "Hello World!",
         &classfile.constant_pool[18]);
     assert_eq!(
-        Constant::Class(cp::ClassConstant {
-            name_index: 26
-        }),
+        Constant::Class(26),
         classfile.constant_pool[19]);
     assert_eq!(
         Constant::NameAndType(cp::NameAndTypeConstant {
@@ -144,7 +134,7 @@ fn test_load_hello_world_class() {
     assert_eq!(2, classfile.methods.len());
     // ctor
     let ctor_info = &classfile.methods[0];
-    assert_eq!(method::ACC_PUBLIC,
+    assert_eq!(method::METHOD_ACC_PUBLIC,
                ctor_info.access_flags);
     assert_utf8_tag(
         "<init>",
@@ -154,8 +144,8 @@ fn test_load_hello_world_class() {
         &classfile.constant_pool[ctor_info.descriptor_index]);
     // main
     let main_info = &classfile.methods[1];
-    assert_eq!(method::ACC_STATIC |
-               method::ACC_PUBLIC,
+    assert_eq!(method::METHOD_ACC_STATIC |
+               method::METHOD_ACC_PUBLIC,
                main_info.access_flags);
     assert_utf8_tag(
         "main",
@@ -178,22 +168,24 @@ fn should_load_point_class() {
 
     // Then
     assert_eq!(2, class.fields.len());
-    assert_eq!(classfile::ACC_PUBLIC |
-               classfile::ACC_SUPER,
+    assert_eq!(classfile::CLASS_ACC_PUBLIC |
+               classfile::CLASS_ACC_SUPER,
                class.access_flags);
-    let this_class_desc = &class.constant_pool[class.this_class().name_index];
+    let this_class_desc = class.constant_pool[class.this_class].as_class();
+    let this_class_desc = &class.constant_pool[this_class_desc];
     assert_utf8_tag("io/hcf/frappe/Point", &this_class_desc);
-    let super_class_desc = &class.constant_pool[class.super_class().unwrap().name_index];
+    let super_class_desc = class.constant_pool[class.super_class].as_class();
+    let super_class_desc = &class.constant_pool[super_class_desc];
     assert_utf8_tag("java/lang/Object", &super_class_desc);
 
     let x_field = &class.fields[0];
     assert_utf8_tag("x", &class.constant_pool[x_field.name_index]);
-    assert_eq!(field::ACC_PRIVATE, x_field.access_flags);
+    assert_eq!(field::FIELD_ACC_PRIVATE, x_field.access_flags);
     assert_utf8_tag("I", &class.constant_pool[x_field.descriptor_index]);
 
     let y_field = &class.fields[1];
     assert_utf8_tag("y", &class.constant_pool[y_field.name_index]);
-    assert_eq!(field::ACC_PRIVATE, y_field.access_flags);
+    assert_eq!(field::FIELD_ACC_PRIVATE, y_field.access_flags);
     assert_utf8_tag("I", &class.constant_pool[y_field.descriptor_index]);
 }
 

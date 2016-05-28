@@ -6,8 +6,8 @@ use classfile::error::*;
 use classfile::{ClassFile, ClassAccessFlags};
 use classfile::field::{FieldInfo, FieldAccessFlags};
 use classfile::method::{MethodInfo, MethodAccessFlags};
+use classfile::cp::*;
 use classfile::attr::*;
-use classfile::constant_pool::*;
 
 const CONSTANT_UTF8: u8 = 1;
 const CONSTANT_INTEGER: u8 = 3;
@@ -39,8 +39,8 @@ impl<T: io::Read> ClassReader<T> {
         let major_version = try!(self.read_u16());
         let constant_pool = try!(self.read_constant_pool());
         let access_flags = try!(self.read_u16());
-        let this_class_index = try!(self.read_u16());
-        let super_class_index = try!(self.read_u16());
+        let this_class = try!(self.read_u16());
+        let super_class = try!(self.read_u16());
         let interfaces_count = try!(self.read_u16());
         let mut interfaces: Vec<u16> = vec![];
         for _ in 0..interfaces_count {
@@ -56,9 +56,9 @@ impl<T: io::Read> ClassReader<T> {
             minor_version: minor_version,
             major_version: major_version,
             constant_pool: constant_pool,
-            access_flags: ClassAccessFlags::new(access_flags),
-            this_class_index: this_class_index,
-            super_class_index: super_class_index,
+            access_flags: ClassAccessFlags::from_bits_truncate(access_flags),
+            this_class: this_class,
+            super_class: super_class,
             interfaces: interfaces,
             fields: fields,
             methods: methods,
@@ -146,11 +146,11 @@ impl<T: io::Read> ClassReader<T> {
                 }
                 CONSTANT_CLASS => {
                     let name_index = try!(self.read_u16());
-                    Ok(Constant::Class(ClassConstant { name_index: name_index }))
+                    Ok(Constant::Class(name_index))
                 }
                 CONSTANT_STRING => {
                     let string_index = try!(self.read_u16());
-                    Ok(Constant::String(StringConstant { string_index: string_index }))
+                    Ok(Constant::String(string_index))
                 }
                 CONSTANT_FIELDREF => {
                     let class_index = try!(self.read_u16());
@@ -229,7 +229,7 @@ impl<T: io::Read> ClassReader<T> {
             match attribute_name.as_ref() {
                 "SourceFile" => {
                     let sourcefile_index = try!(self.read_u16());
-                    Ok(AttributeInfo::SourceFile { sourcefile_index: sourcefile_index })
+                    Ok(AttributeInfo::SourceFile(sourcefile_index))
                 }
                 "InnerClasses" => {
                     let inner_classes = try!(self.read_inner_classes_attribute());
@@ -242,7 +242,7 @@ impl<T: io::Read> ClassReader<T> {
                         class_index: class_index,
                         method_index: method_index,
                     };
-                    Ok(AttributeInfo::EnclosingMethod(Box::new(enclosing_method)))
+                    Ok(AttributeInfo::EnclosingMethod(enclosing_method))
                 }
                 "SourceDebugExtension" => {
                     let mut debug_extension: Vec<u8> = vec![];
@@ -360,7 +360,7 @@ impl<T: io::Read> ClassReader<T> {
                 "Deprecated" => Ok(AttributeInfo::Deprecated),
                 "Signature" => {
                     let signature_index = try!(self.read_u16());
-                    Ok(AttributeInfo::Signature { signature_index: signature_index })
+                    Ok(AttributeInfo::Signature(signature_index))
                 }
                 "AnnotationDefault" => {
                     let element_value = try!(self.read_element_value());
