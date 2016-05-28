@@ -1,9 +1,7 @@
 use std::io;
 
 use classfile::ClassFile;
-use classfile::attr;
-use classfile::attr::AttributeInfo;
-use classfile::attr::annotation;
+use classfile::attr::*;
 use classfile::constant_pool as cp;
 use classfile::method;
 
@@ -52,8 +50,8 @@ pub trait Disassemble {
 impl Disassemble for ClassFile {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         for attribute in self.attributes.iter() {
-            if let attr::AttributeInfo::SourceFile(ref sourcefile_info) = *attribute {
-                let source_file = &self.constant_pool[sourcefile_info.sourcefile_index];
+            if let AttributeInfo::SourceFile { sourcefile_index } = *attribute {
+                let source_file = &self.constant_pool[sourcefile_index];
                 write!(fmt.out,
                        "Compiled from \"{}\"\n",
                        source_file.as_utf8().unwrap());
@@ -219,7 +217,7 @@ impl Disassemble for cp::ConstantPool {
     }
 }
 
-impl Disassemble for method::Methods {
+impl Disassemble for Vec<method::MethodInfo> {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         for method in self.iter() {
             method.pretty_print(fmt, opts);
@@ -229,7 +227,7 @@ impl Disassemble for method::Methods {
     }
 }
 
-impl Disassemble for attr::Attributes {
+impl Disassemble for Attributes {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         for attr in self.iter() {
             attr.pretty_print(fmt, opts);
@@ -242,11 +240,14 @@ impl Disassemble for attr::Attributes {
 impl Disassemble for AttributeInfo {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         match *self {
-            AttributeInfo::SourceFile(ref source_file) => {
+            AttributeInfo::SourceFile { sourcefile_index } => {
                 write!(fmt.out, "SourceFile");
             }
-            AttributeInfo::AnnotationDefault(ref annotation_default) => {
-                annotation_default.pretty_print(fmt, opts);
+            AttributeInfo::AnnotationDefault(ref element_value) => {
+                write!(fmt.out, "AnnotationDefault:\n");
+                write!(fmt.out, "  default_value: ");
+                element_value.pretty_print(fmt, opts);
+                write!(fmt.out, "\n");
             }
             AttributeInfo::Code(ref code) => {
                 code.pretty_print(fmt, opts);
@@ -291,10 +292,10 @@ impl Disassemble for method::MethodInfo {
     }
 }
 
-impl Disassemble for annotation::ElementValue {
+impl Disassemble for ElementValue {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         match *self {
-            annotation::ElementValue::ConstantValue(ref constant_value) => {
+            ElementValue::ConstantValue(ref constant_value) => {
                 write!(fmt.out,
                        "{}#{}",
                        constant_value.tag as char,
@@ -308,17 +309,7 @@ impl Disassemble for annotation::ElementValue {
     }
 }
 
-impl Disassemble for attr::AnnotationDefaultAttribute {
-    fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
-        write!(fmt.out, "AnnotationDefault:\n");
-        write!(fmt.out, "  default_value: ");
-        self.default_value.pretty_print(fmt, opts);
-        write!(fmt.out, "\n");
-        Ok(())
-    }
-}
-
-impl Disassemble for attr::CodeAttribute {
+impl Disassemble for CodeAttribute {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         write!(fmt.out,
                "      stack={}, locals={}, args_size={}\n",

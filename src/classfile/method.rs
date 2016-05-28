@@ -1,36 +1,4 @@
-use std::io;
-use std::vec::Vec;
-use std::ops::Deref;
-
-use util::*;
-use classfile::error::*;
 use classfile::attr::Attributes;
-use classfile::constant_pool as cp;
-
-#[derive(Debug)]
-pub struct Methods {
-    methods: Vec<MethodInfo>,
-}
-
-impl Methods {
-    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> Result<Methods> {
-        let methods_count = try!(read_u16(rdr));
-        let mut methods: Vec<MethodInfo> = vec![];
-        for _ in 0..methods_count {
-            let entry = try!(MethodInfo::read(rdr, constant_pool));
-            methods.push(entry);
-        }
-        Ok(Methods { methods: methods })
-    }
-}
-
-impl Deref for Methods {
-    type Target = Vec<MethodInfo>;
-
-    fn deref(&self) -> &Vec<MethodInfo> {
-        &self.methods
-    }
-}
 
 bitflags! {
     pub flags MethodAccessFlags: u16 {
@@ -50,10 +18,6 @@ bitflags! {
 }
 
 impl MethodAccessFlags {
-    fn new(access_flags: u16) -> MethodAccessFlags {
-        MethodAccessFlags::from_bits_truncate(access_flags)
-    }
-
     pub fn is_public(&self) -> bool {
         self.contains(ACC_PUBLIC)
     }
@@ -109,19 +73,4 @@ pub struct MethodInfo {
     pub name_index: u16,
     pub descriptor_index: u16,
     pub attributes: Attributes,
-}
-
-impl MethodInfo {
-    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> Result<MethodInfo> {
-        let access_flags = try!(read_u16(rdr));
-        let name_index = try!(read_u16(rdr));
-        let descriptor_index = try!(read_u16(rdr));
-        let attributes = try!(Attributes::read(rdr, constant_pool));
-        Ok(MethodInfo {
-            access_flags: MethodAccessFlags::new(access_flags),
-            name_index: name_index,
-            descriptor_index: descriptor_index,
-            attributes: attributes,
-        })
-    }
 }

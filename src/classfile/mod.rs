@@ -3,17 +3,15 @@ pub mod field;
 pub mod constant_pool;
 pub mod attr;
 pub mod error;
+pub mod reader;
 
 use std::fmt;
 use std::vec::Vec;
-use std::io;
 
-use util::*;
-use classfile::error::Result;
 use classfile::attr::Attributes;
 use classfile::constant_pool::{ConstantPool, ClassTag, Tag};
-use classfile::field::Fields;
-use classfile::method::Methods;
+use classfile::field::FieldInfo;
+use classfile::method::MethodInfo;
 
 bitflags! {
     pub flags ClassAccessFlags: u16 {
@@ -109,45 +107,12 @@ pub struct ClassFile {
     this_class_index: u16,
     super_class_index: u16,
     pub interfaces: Vec<u16>,
-    pub fields: Fields,
-    pub methods: Methods,
+    pub fields: Vec<FieldInfo>,
+    pub methods: Vec<MethodInfo>,
     pub attributes: Attributes,
 }
 
 impl ClassFile {
-    pub fn read<T: io::Read>(rdr: &mut T) -> Result<ClassFile> {
-        let magic = try!(read_u32(rdr));
-        let minor_version = try!(read_u16(rdr));
-        let major_version = try!(read_u16(rdr));
-        let constant_pool = try!(ConstantPool::read(rdr));
-        let access_flags = try!(read_u16(rdr));
-        let this_class_index = try!(read_u16(rdr));
-        let super_class_index = try!(read_u16(rdr));
-        let interfaces_count = try!(read_u16(rdr));
-        let mut interfaces: Vec<u16> = vec![];
-        for _ in 0..interfaces_count {
-            let entry = try!(read_u16(rdr));
-            interfaces.push(entry);
-        }
-        let fields = try!(Fields::read(rdr, &constant_pool));
-        let methods = try!(Methods::read(rdr, &constant_pool));
-        let attributes = try!(Attributes::read(rdr, &constant_pool));
-
-        Ok(ClassFile {
-            magic: magic,
-            minor_version: minor_version,
-            major_version: major_version,
-            constant_pool: constant_pool,
-            access_flags: ClassAccessFlags::new(access_flags),
-            this_class_index: this_class_index,
-            super_class_index: super_class_index,
-            interfaces: interfaces,
-            fields: fields,
-            methods: methods,
-            attributes: attributes,
-        })
-    }
-
     pub fn this_class(&self) -> &ClassTag {
         let tag = &self.constant_pool[self.this_class_index];
         if let Tag::Class(ref class_tag) = *tag {

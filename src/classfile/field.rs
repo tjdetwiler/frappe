@@ -1,11 +1,4 @@
-use std::io;
-use std::vec::Vec;
-use std::ops::Deref;
-
-use util::*;
-use classfile::error::*;
 use classfile::attr::Attributes;
-use classfile::constant_pool as cp;
 
 bitflags! {
 /// Holds the
@@ -26,10 +19,6 @@ bitflags! {
 }
 
 impl FieldAccessFlags {
-    fn new(access_flags: u16) -> FieldAccessFlags {
-        FieldAccessFlags::from_bits_truncate(access_flags)
-    }
-
     /// Returns `true` if the `ACC_PUBLIC` flag is set.
     pub fn is_public(&self) -> bool {
         self.contains(ACC_PUBLIC)
@@ -76,35 +65,6 @@ impl FieldAccessFlags {
     }
 }
 
-/// Wrapper around a `Vec<FieldInfo>`.
-#[derive(Debug)]
-pub struct Fields {
-    fields: Vec<FieldInfo>,
-}
-
-impl Fields {
-    /// Reads in a list of `FieldInfo` structures. The reader should be positioned such that
-    /// the next 2 byte define the number of entries, followed immediately by the
-    /// `FieldInfo` structures.
-    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> Result<Fields> {
-        let fields_count = try!(read_u16(rdr));
-        let mut fields: Vec<FieldInfo> = vec![];
-        for _ in 0..fields_count {
-            let entry = try!(FieldInfo::read(rdr, constant_pool));
-            fields.push(entry);
-        }
-        Ok(Fields { fields: fields })
-    }
-}
-
-impl Deref for Fields {
-    type Target = Vec<FieldInfo>;
-
-    fn deref(&self) -> &Vec<FieldInfo> {
-        &self.fields
-    }
-}
-
 /// Metadata about a field in a class file.
 #[derive(Debug)]
 pub struct FieldInfo {
@@ -117,22 +77,4 @@ pub struct FieldInfo {
     pub descriptor_index: u16,
     /// Collection of attributes that are associated with this field.
     pub attributes: Attributes,
-}
-
-impl FieldInfo {
-    /// Constructs a [`FieldInfo`]
-    /// (https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.5)
-    /// structure from a byte stream containing classfile data.
-    pub fn read<T: io::Read>(rdr: &mut T, constant_pool: &cp::ConstantPool) -> Result<FieldInfo> {
-        let access_flags = try!(read_u16(rdr));
-        let name_index = try!(read_u16(rdr));
-        let descriptor_index = try!(read_u16(rdr));
-        let attributes: Attributes = try!(Attributes::read(rdr, constant_pool));
-        Ok(FieldInfo {
-            access_flags: FieldAccessFlags::new(access_flags),
-            name_index: name_index,
-            descriptor_index: descriptor_index,
-            attributes: attributes,
-        })
-    }
 }

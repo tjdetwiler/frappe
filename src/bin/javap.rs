@@ -6,6 +6,7 @@ extern crate env_logger;
 use std::fs::File;
 
 use frappe::classfile::ClassFile;
+use frappe::classfile::reader::ClassReader;
 use frappe::javap::{Disassemble, Formatter, Options};
 
 fn main() {
@@ -16,7 +17,7 @@ fn main() {
     class_filename.push_str(".class");
     let mut class_file = File::open(class_filename).unwrap();
     let mut fmt = Formatter::new();
-    let class = ClassFile::read(&mut class_file).unwrap();
+    let class = ClassReader::new(class_file).read_class().unwrap();
     let opts = Options {
         verbose: verbose,
         constant_pool: &class.constant_pool,

@@ -1,11 +1,11 @@
 use std::fs::File;
 
 use frappe::classfile;
-use frappe::classfile::ClassFile;
 use frappe::classfile::constant_pool as cp;
 use frappe::classfile::constant_pool::Tag;
 use frappe::classfile::method;
 use frappe::classfile::field;
+use frappe::classfile::reader::ClassReader;
 
 #[test]
 fn test_load_hello_world_class() {
@@ -13,7 +13,7 @@ fn test_load_hello_world_class() {
     let mut file = File::open("test-classes/HelloWorld.class").unwrap();
 
     // When
-    let classfile = ClassFile::read(&mut file).unwrap();
+    let classfile = ClassReader::new(&mut file).read_class().unwrap();
 
     // Then
     assert_eq!(0xcafebabe, classfile.magic);
@@ -174,7 +174,7 @@ fn should_load_point_class() {
     let mut file = File::open("test-classes/Point.class").unwrap();
 
     // When
-    let class = ClassFile::read(&mut file).unwrap();
+    let class = ClassReader::new(&mut file).read_class().unwrap();
 
     // Then
     assert_eq!(2, class.fields.len());
