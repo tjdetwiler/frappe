@@ -95,7 +95,7 @@ impl Disassemble for ClassFile {
 }
 
 fn generate_typed_entity_comment_string(cp: &cp::ConstantPool,
-                                        entity: &cp::TypedEntityTag)
+                                        entity: &cp::TypedEntityConstant)
                                         -> String {
     let class_info = cp[entity.class_index]
         .as_class()
@@ -120,13 +120,13 @@ fn generate_typed_entity_comment_string(cp: &cp::ConstantPool,
 
 }
 
-impl Disassemble for cp::Tag {
+impl Disassemble for cp::Constant {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         let mut tag_string = "";
         let mut arg_string = String::new();
         let mut comment_string: Option<String> = None;
         match *self {
-            cp::Tag::Methodref(ref method_tag) => {
+            cp::Constant::Methodref(ref method_tag) => {
                 tag_string = "Methodref";
                 arg_string = format!("#{}.#{}",
                                      method_tag.class_index,
@@ -134,7 +134,7 @@ impl Disassemble for cp::Tag {
                 comment_string = Some(generate_typed_entity_comment_string(opts.constant_pool,
                                                                            method_tag));
             }
-            cp::Tag::Fieldref(ref field_tag) => {
+            cp::Constant::Fieldref(ref field_tag) => {
                 tag_string = "Fieldref";
                 arg_string = format!("#{}.#{}",
                                      field_tag.class_index,
@@ -142,7 +142,7 @@ impl Disassemble for cp::Tag {
                 comment_string = Some(generate_typed_entity_comment_string(opts.constant_pool,
                                                                            field_tag));
             }
-            cp::Tag::InterfaceMethodref(ref method_tag) => {
+            cp::Constant::InterfaceMethodref(ref method_tag) => {
                 tag_string = "InterfaceMethodref";
                 arg_string = format!("#{}.#{}",
                                      method_tag.class_index,
@@ -150,13 +150,13 @@ impl Disassemble for cp::Tag {
                 comment_string = Some(generate_typed_entity_comment_string(opts.constant_pool,
                                                                            method_tag));
             }
-            cp::Tag::String(ref string_tag) => {
+            cp::Constant::String(ref string_tag) => {
                 tag_string = "String";
                 arg_string = format!("#{}", string_tag.string_index);
                 let string = opts.constant_pool[string_tag.string_index].as_utf8().unwrap();
                 comment_string = Some(format!("{}", string));
             }
-            cp::Tag::Class(ref class_tag) => {
+            cp::Constant::Class(ref class_tag) => {
                 tag_string = "Class";
                 arg_string = format!("#{}", class_tag.name_index);
                 let class_name = opts.constant_pool[class_tag.name_index]
@@ -164,11 +164,11 @@ impl Disassemble for cp::Tag {
                     .unwrap();
                 comment_string = Some(format!("{}", class_name));
             }
-            cp::Tag::Utf8(ref string) => {
+            cp::Constant::Utf8(ref string) => {
                 tag_string = "Utf8";
                 arg_string = format!("{}", string);
             }
-            cp::Tag::NameAndType(cp::NameAndTypeTag { name_index, descriptor_index }) => {
+            cp::Constant::NameAndType(cp::NameAndTypeConstant { name_index, descriptor_index }) => {
                 tag_string = "NameAndType";
                 arg_string = format!("#{}:#{}", name_index, descriptor_index);
                 let method_name = opts.constant_pool[name_index]
@@ -179,7 +179,7 @@ impl Disassemble for cp::Tag {
                     .unwrap();
                 comment_string = Some(format!("{}:{}", method_name, method_type));
             }
-            cp::Tag::Integer(val) => {
+            cp::Constant::Integer(val) => {
                 tag_string = "Integer";
                 arg_string = format!("{}", val);
             }

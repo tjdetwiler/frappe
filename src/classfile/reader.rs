@@ -106,7 +106,7 @@ impl<T: io::Read> ClassReader<T> {
 
     fn read_constant_pool(&mut self) -> Result<ConstantPool> {
         let size = try!(self.read_u16());
-        let mut constant_pool: Vec<Tag> = vec![];
+        let mut constant_pool: Vec<Constant> = vec![];
         for _ in 0..(size - 1) {
             let tag = try!(self.read_u8());
             let entry = match tag {
@@ -118,20 +118,20 @@ impl<T: io::Read> ClassReader<T> {
                         bytes.push(byte);
                     }
                     let value = try!(String::from_utf8(bytes));
-                    Ok(Tag::Utf8(value))
+                    Ok(Constant::Utf8(value))
                 }
                 CONSTANT_INTEGER => {
                     let bytes = try!(self.read_u32());
-                    Ok(Tag::Integer(bytes as i32))
+                    Ok(Constant::Integer(bytes as i32))
                 }
                 CONSTANT_FLOAT => {
                     let bytes = try!(self.read_u32());
-                    Ok(Tag::Float { bytes: bytes })
+                    Ok(Constant::Float { bytes: bytes })
                 }
                 CONSTANT_LONG => {
                     let high_bytes = try!(self.read_u32());
                     let low_bytes = try!(self.read_u32());
-                    Ok(Tag::Long {
+                    Ok(Constant::Long {
                         high_bytes: high_bytes,
                         low_bytes: low_bytes,
                     })
@@ -139,23 +139,23 @@ impl<T: io::Read> ClassReader<T> {
                 CONSTANT_DOUBLE => {
                     let high_bytes = try!(self.read_u32());
                     let low_bytes = try!(self.read_u32());
-                    Ok(Tag::Double {
+                    Ok(Constant::Double {
                         high_bytes: high_bytes,
                         low_bytes: low_bytes,
                     })
                 }
                 CONSTANT_CLASS => {
                     let name_index = try!(self.read_u16());
-                    Ok(Tag::Class(ClassTag { name_index: name_index }))
+                    Ok(Constant::Class(ClassConstant { name_index: name_index }))
                 }
                 CONSTANT_STRING => {
                     let string_index = try!(self.read_u16());
-                    Ok(Tag::String(StringTag { string_index: string_index }))
+                    Ok(Constant::String(StringConstant { string_index: string_index }))
                 }
                 CONSTANT_FIELDREF => {
                     let class_index = try!(self.read_u16());
                     let name_and_type_index = try!(self.read_u16());
-                    Ok(Tag::Fieldref(TypedEntityTag {
+                    Ok(Constant::Fieldref(TypedEntityConstant {
                         class_index: class_index,
                         name_and_type_index: name_and_type_index,
                     }))
@@ -163,7 +163,7 @@ impl<T: io::Read> ClassReader<T> {
                 CONSTANT_METHODREF => {
                     let class_index = try!(self.read_u16());
                     let name_and_type_index = try!(self.read_u16());
-                    Ok(Tag::Methodref(TypedEntityTag {
+                    Ok(Constant::Methodref(TypedEntityConstant {
                         class_index: class_index,
                         name_and_type_index: name_and_type_index,
                     }))
@@ -171,7 +171,7 @@ impl<T: io::Read> ClassReader<T> {
                 CONSTANT_INTERFACE_METHODREF => {
                     let class_index = try!(self.read_u16());
                     let name_and_type_index = try!(self.read_u16());
-                    Ok(Tag::InterfaceMethodref(TypedEntityTag {
+                    Ok(Constant::InterfaceMethodref(TypedEntityConstant {
                         class_index: class_index,
                         name_and_type_index: name_and_type_index,
                     }))
@@ -179,7 +179,7 @@ impl<T: io::Read> ClassReader<T> {
                 CONSTANT_NAME_AND_TYPE => {
                     let name_index = try!(self.read_u16());
                     let descriptor_index = try!(self.read_u16());
-                    Ok(Tag::NameAndType(NameAndTypeTag {
+                    Ok(Constant::NameAndType(NameAndTypeConstant {
                         name_index: name_index,
                         descriptor_index: descriptor_index,
                     }))
@@ -187,19 +187,19 @@ impl<T: io::Read> ClassReader<T> {
                 CONSTANT_METHOD_HANDLE => {
                     let reference_kind = try!(self.read_u8());
                     let reference_index = try!(self.read_u16());
-                    Ok(Tag::MethodHandle {
+                    Ok(Constant::MethodHandle {
                         reference_kind: reference_kind,
                         reference_index: reference_index,
                     })
                 }
                 CONSTANT_METHOD_TYPE => {
                     let descriptor_index = try!(self.read_u16());
-                    Ok(Tag::MethodType { descriptor_index: descriptor_index })
+                    Ok(Constant::MethodType { descriptor_index: descriptor_index })
                 }
                 CONSTANT_INVOKE_DYNAMIC => {
                     let bootstrap_method_attr_index = try!(self.read_u16());
                     let name_and_type_index = try!(self.read_u16());
-                    Ok(Tag::InvokeDynamic {
+                    Ok(Constant::InvokeDynamic {
                         bootstrap_method_attr_index: bootstrap_method_attr_index,
                         name_and_type_index: name_and_type_index,
                     })
@@ -224,7 +224,7 @@ impl<T: io::Read> ClassReader<T> {
 
     fn read_attribute(&mut self, constant_pool: &ConstantPool) -> Result<AttributeInfo> {
         let name_index = try!(self.read_u16());
-        if let Tag::Utf8(ref attribute_name) = constant_pool[name_index] {
+        if let Constant::Utf8(ref attribute_name) = constant_pool[name_index] {
             let attribute_length = try!(self.read_u32());
             match attribute_name.as_ref() {
                 "SourceFile" => {

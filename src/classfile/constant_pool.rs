@@ -2,7 +2,7 @@ use std::ops::{Deref, Index};
 
 #[derive(Debug)]
 pub struct ConstantPool {
-    pub pool: Vec<Tag>,
+    pub pool: Vec<Constant>,
 }
 
 impl ConstantPool {
@@ -14,8 +14,8 @@ impl ConstantPool {
         self[index].as_utf8()
     }
 
-    pub fn get_class(&self, index: u16) -> Option<&ClassTag> {
-        if let Tag::Class(ref class_tag) = self[index] {
+    pub fn get_class(&self, index: u16) -> Option<&ClassConstant> {
+        if let Constant::Class(ref class_tag) = self[index] {
             Some(class_tag)
         } else {
             None
@@ -24,50 +24,50 @@ impl ConstantPool {
 }
 
 impl Index<u16> for ConstantPool {
-    type Output = Tag;
+    type Output = Constant;
 
-    fn index<'a>(&'a self, index: u16) -> &'a Tag {
+    fn index<'a>(&'a self, index: u16) -> &'a Constant {
         &self.pool[index as usize - 1]
     }
 }
 
 impl Deref for ConstantPool {
-    type Target = Vec<Tag>;
+    type Target = Vec<Constant>;
 
-    fn deref(&self) -> &Vec<Tag> {
+    fn deref(&self) -> &Vec<Constant> {
         &self.pool
     }
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct ClassTag {
+pub struct ClassConstant {
     pub name_index: u16,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct TypedEntityTag {
+pub struct TypedEntityConstant {
     pub class_index: u16,
     pub name_and_type_index: u16,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct StringTag {
+pub struct StringConstant {
     pub string_index: u16,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct NameAndTypeTag {
+pub struct NameAndTypeConstant {
     pub name_index: u16,
     pub descriptor_index: u16,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Tag {
-    Class(ClassTag),
-    Fieldref(TypedEntityTag),
-    Methodref(TypedEntityTag),
-    InterfaceMethodref(TypedEntityTag),
-    String(StringTag),
+pub enum Constant {
+    Class(ClassConstant),
+    Fieldref(TypedEntityConstant),
+    Methodref(TypedEntityConstant),
+    InterfaceMethodref(TypedEntityConstant),
+    String(StringConstant),
     Integer(i32),
     Float {
         bytes: u32,
@@ -80,7 +80,7 @@ pub enum Tag {
         high_bytes: u32,
         low_bytes: u32,
     },
-    NameAndType(NameAndTypeTag),
+    NameAndType(NameAndTypeConstant),
     Utf8(String),
     MethodHandle {
         reference_kind: u8,
@@ -95,24 +95,24 @@ pub enum Tag {
     },
 }
 
-impl Tag {
-    pub fn as_class(&self) -> Option<&ClassTag> {
+impl Constant {
+    pub fn as_class(&self) -> Option<&ClassConstant> {
         match *self {
-            Tag::Class(ref class) => Some(class),
+            Constant::Class(ref class) => Some(class),
             _ => None,
         }
     }
 
-    pub fn as_name_and_type(&self) -> Option<&NameAndTypeTag> {
+    pub fn as_name_and_type(&self) -> Option<&NameAndTypeConstant> {
         match *self {
-            Tag::NameAndType(ref name_and_type) => Some(name_and_type),
+            Constant::NameAndType(ref name_and_type) => Some(name_and_type),
             _ => None,
         }
     }
 
     pub fn as_utf8(&self) -> Option<&String> {
         match *self {
-            Tag::Utf8(ref value) => Some(value),
+            Constant::Utf8(ref value) => Some(value),
             _ => None,
         }
     }

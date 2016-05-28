@@ -9,7 +9,7 @@ use std::fmt;
 use std::vec::Vec;
 
 use classfile::attr::Attributes;
-use classfile::constant_pool::{ConstantPool, ClassTag, Tag};
+use classfile::constant_pool::{ConstantPool, ClassConstant, Constant};
 use classfile::field::FieldInfo;
 use classfile::method::MethodInfo;
 
@@ -113,26 +113,24 @@ pub struct ClassFile {
 }
 
 impl ClassFile {
-    pub fn this_class(&self) -> &ClassTag {
+    pub fn this_class(&self) -> &ClassConstant {
         let tag = &self.constant_pool[self.this_class_index];
-        if let Tag::Class(ref class_tag) = *tag {
+        if let Constant::Class(ref class_tag) = *tag {
             class_tag
         } else {
-            panic!(format!("ConstantPoolTag entry found is not of type Class: {:?}",
-                           tag));
+            panic!(format!("ConstantPool entry found is not of type Class: {:?}", tag));
         }
     }
 
-    pub fn super_class(&self) -> Option<&ClassTag> {
+    pub fn super_class(&self) -> Option<&ClassConstant> {
         if self.super_class_index == 0 {
             return None;
         }
         let tag = &self.constant_pool[self.super_class_index];
-        if let Tag::Class(ref class_tag) = *tag {
+        if let Constant::Class(ref class_tag) = *tag {
             Some(class_tag)
         } else {
-            panic!(format!("ConstantPoolTag entry found is not of type Class: {:?}",
-                           tag));
+            panic!(format!("ConstantPool entry found is not of type Class: {:?}", tag));
         }
     }
 }
