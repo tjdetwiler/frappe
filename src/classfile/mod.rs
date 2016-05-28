@@ -9,15 +9,8 @@ pub mod reader;
 use std::fmt;
 use std::vec::Vec;
 
-use classfile::attr::{
-    Annotation,
-    Attributes, 
-    AttributeInfo,
-    BootstrapMethodInfo,
-    EnclosingMethodAttribute,
-    InnerClassInfo,
-    TypeAnnotation,
-};
+use classfile::attr::{Annotation, Attributes, AttributeInfo, BootstrapMethodInfo,
+                      EnclosingMethodAttribute, InnerClassInfo, TypeAnnotation};
 use classfile::cp::{ConstantPool, Constant};
 use classfile::field::FieldInfo;
 use classfile::method::MethodInfo;
@@ -140,7 +133,7 @@ impl ClassFile {
         None
     }
 
-    /// Resolves the RuntimeVisibleAnnotations attribute and returns the list of 
+    /// Resolves the RuntimeVisibleAnnotations attribute and returns the list of
     /// annotations if it is present.
     pub fn runtime_visible_annotations(&self) -> Option<&Vec<Annotation>> {
         for attr in self.attributes.iter() {
@@ -151,7 +144,7 @@ impl ClassFile {
         None
     }
 
-    /// Resolves the RuntimeInvisibleAnnotations attribute and returns the list of 
+    /// Resolves the RuntimeInvisibleAnnotations attribute and returns the list of
     /// annotations if it is present.
     pub fn runtime_invisible_annotations(&self) -> Option<&Vec<Annotation>> {
         for attr in self.attributes.iter() {
@@ -162,7 +155,7 @@ impl ClassFile {
         None
     }
 
-    /// Resolves the RuntimeVisibleTypeAnnotations attribute and returns the list of 
+    /// Resolves the RuntimeVisibleTypeAnnotations attribute and returns the list of
     /// annotations if it is present.
     pub fn runtime_visible_type_annotations(&self) -> Option<&Vec<TypeAnnotation>> {
         for attr in self.attributes.iter() {
@@ -173,7 +166,7 @@ impl ClassFile {
         None
     }
 
-    /// Resolves the RuntimeInvisibleTypeAnnotations attribute and returns the list of 
+    /// Resolves the RuntimeInvisibleTypeAnnotations attribute and returns the list of
     /// annotations if it is present.
     pub fn runtime_invisible_type_annotations(&self) -> Option<&Vec<TypeAnnotation>> {
         for attr in self.attributes.iter() {

@@ -52,9 +52,7 @@ impl Disassemble for ClassFile {
         for attribute in self.attributes.iter() {
             if let AttributeInfo::SourceFile(sourcefile_index) = *attribute {
                 let source_file = &self.constant_pool[sourcefile_index];
-                write!(fmt.out,
-                       "Compiled from \"{}\"\n",
-                       source_file.as_utf8());
+                write!(fmt.out, "Compiled from \"{}\"\n", source_file.as_utf8());
             }
         }
         let class_name = self.this_class_name();
@@ -95,20 +93,15 @@ impl Disassemble for ClassFile {
 fn generate_typed_entity_comment_string(cp: &cp::ConstantPool,
                                         entity: &cp::TypedEntityConstant)
                                         -> String {
-    let class_info = cp[entity.class_index]
-        .as_class();
-    let class_name = cp[class_info]
-        .as_utf8();
-    let entity_info = cp[entity.name_and_type_index]
-        .as_name_and_type();
-    let method_name = cp[entity_info.name_index]
-        .as_utf8();
+    let class_info = cp[entity.class_index].as_class();
+    let class_name = cp[class_info].as_utf8();
+    let entity_info = cp[entity.name_and_type_index].as_name_and_type();
+    let method_name = cp[entity_info.name_index].as_utf8();
     let method_name = match method_name.as_ref() {
         "<init>" | "<clinit>" => format!("\"{}\"", method_name),
         _ => format!("{}", method_name),
     };
-    let method_type = cp[entity_info.descriptor_index]
-        .as_utf8();
+    let method_type = cp[entity_info.descriptor_index].as_utf8();
     format!("{}.{}:{}", class_name, method_name, method_type)
 
 }
@@ -152,8 +145,7 @@ impl Disassemble for cp::Constant {
             cp::Constant::Class(name_index) => {
                 tag_string = "Class";
                 arg_string = format!("#{}", name_index);
-                let class_name = opts.constant_pool[name_index]
-                    .as_utf8();
+                let class_name = opts.constant_pool[name_index].as_utf8();
                 comment_string = Some(format!("{}", class_name));
             }
             cp::Constant::Utf8(ref string) => {
@@ -163,10 +155,8 @@ impl Disassemble for cp::Constant {
             cp::Constant::NameAndType(cp::NameAndTypeConstant { name_index, descriptor_index }) => {
                 tag_string = "NameAndType";
                 arg_string = format!("#{}:#{}", name_index, descriptor_index);
-                let method_name = opts.constant_pool[name_index]
-                    .as_utf8();
-                let method_type = opts.constant_pool[descriptor_index]
-                    .as_utf8();
+                let method_name = opts.constant_pool[name_index].as_utf8();
+                let method_type = opts.constant_pool[descriptor_index].as_utf8();
                 comment_string = Some(format!("{}:{}", method_name, method_type));
             }
             cp::Constant::Integer(val) => {
