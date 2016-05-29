@@ -67,5 +67,5 @@ pub struct FieldInfo {
     /// (https://docs.oracle.com/javase/specs/jvms/se8/html/jvms-4.html#jvms-4.3.2).
     pub descriptor_index: u16,
     /// Collection of attributes that are associated with this field.
-    pub attributes: Attributes,
+    pub attrs: Attributes,
 }

@@ -220,7 +220,7 @@ pub struct CodeAttribute {
     pub max_locals: u16,
     pub code: Vec<u8>,
     pub exception_table: Vec<ExceptionInfo>,
-    pub attributes: Attributes,
+    pub attrs: Attributes,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -477,6 +477,17 @@ impl Attributes {
         }
         None
     }
+
+    /// Resolves the constant value attribute of a field info structure and returns the index
+    /// of the value if present.
+    pub fn constant_value(&self) -> Option<u16> {
+        for attr in self.attributes.iter() {
+            if let AttributeInfo::ConstantValue(value) = *attr {
+                return Some(value);
+            }
+        }
+        None
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -486,9 +497,7 @@ pub enum AttributeInfo {
     EnclosingMethod(EnclosingMethodAttribute),
     SourceDebugExtension(Vec<u8>),
     BootstrapMethods(Vec<BootstrapMethodInfo>),
-    ConstantValue {
-        constantvalue_index: u16,
-    },
+    ConstantValue(u16),
     Code(Box<CodeAttribute>),
     Exceptions(Vec<u16>),
     LineNumberTable(Vec<LineNumberTableEntry>),

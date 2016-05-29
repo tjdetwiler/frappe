@@ -40,7 +40,7 @@ impl Formatter {
 
 pub struct Options<'a> {
     pub verbose: bool,
-    pub constant_pool: &'a cp::ConstantPool,
+    pub constants: &'a cp::ConstantPool,
 }
 
 pub trait Disassemble {
@@ -49,9 +49,9 @@ pub trait Disassemble {
 
 impl Disassemble for ClassFile {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
-        for attribute in self.attributes.iter() {
+        for attribute in self.attrs.iter() {
             if let AttributeInfo::SourceFile(sourcefile_index) = *attribute {
-                let source_file = &self.constant_pool[sourcefile_index];
+                let source_file = &self.constants[sourcefile_index];
                 write!(fmt.out, "Compiled from \"{}\"\n", source_file.as_utf8());
             }
         }
@@ -81,7 +81,7 @@ impl Disassemble for ClassFile {
             write!(fmt.out, "  minor version: {}\n", self.minor_version);
             write!(fmt.out, "  major version: {}\n", self.major_version);
             write!(fmt.out, "  flags: {}\n", self.access_flags);
-            self.constant_pool.pretty_print(fmt, opts);
+            self.constants.pretty_print(fmt, opts);
         }
         write!(fmt.out, "{{\n");
         self.methods.pretty_print(fmt, opts);
@@ -117,7 +117,7 @@ impl Disassemble for cp::Constant {
                 arg_string = format!("#{}.#{}",
                                      method_tag.class_index,
                                      method_tag.name_and_type_index);
-                comment_string = Some(generate_typed_entity_comment_string(opts.constant_pool,
+                comment_string = Some(generate_typed_entity_comment_string(opts.constants,
                                                                            method_tag));
             }
             cp::Constant::Fieldref(ref field_tag) => {
@@ -125,7 +125,7 @@ impl Disassemble for cp::Constant {
                 arg_string = format!("#{}.#{}",
                                      field_tag.class_index,
                                      field_tag.name_and_type_index);
-                comment_string = Some(generate_typed_entity_comment_string(opts.constant_pool,
+                comment_string = Some(generate_typed_entity_comment_string(opts.constants,
                                                                            field_tag));
             }
             cp::Constant::InterfaceMethodref(ref method_tag) => {
@@ -133,19 +133,19 @@ impl Disassemble for cp::Constant {
                 arg_string = format!("#{}.#{}",
                                      method_tag.class_index,
                                      method_tag.name_and_type_index);
-                comment_string = Some(generate_typed_entity_comment_string(opts.constant_pool,
+                comment_string = Some(generate_typed_entity_comment_string(opts.constants,
                                                                            method_tag));
             }
             cp::Constant::String(string_index) => {
                 tag_string = "String";
                 arg_string = format!("#{}", string_index);
-                let string = opts.constant_pool[string_index].as_utf8();
+                let string = opts.constants[string_index].as_utf8();
                 comment_string = Some(format!("{}", string));
             }
             cp::Constant::Class(name_index) => {
                 tag_string = "Class";
                 arg_string = format!("#{}", name_index);
-                let class_name = opts.constant_pool[name_index].as_utf8();
+                let class_name = opts.constants[name_index].as_utf8();
                 comment_string = Some(format!("{}", class_name));
             }
             cp::Constant::Utf8(ref string) => {
@@ -155,13 +155,49 @@ impl Disassemble for cp::Constant {
             cp::Constant::NameAndType(cp::NameAndTypeConstant { name_index, descriptor_index }) => {
                 tag_string = "NameAndType";
                 arg_string = format!("#{}:#{}", name_index, descriptor_index);
-                let method_name = opts.constant_pool[name_index].as_utf8();
-                let method_type = opts.constant_pool[descriptor_index].as_utf8();
+                let method_name = opts.constants[name_index].as_utf8();
+                let method_type = opts.constants[descriptor_index].as_utf8();
                 comment_string = Some(format!("{}:{}", method_name, method_type));
             }
             cp::Constant::Integer(val) => {
                 tag_string = "Integer";
                 arg_string = format!("{}", val);
+            }
+            cp::Constant::Long(val) => {
+                tag_string = "Long";
+                arg_string = format!("{}l", val);
+            }
+            cp::Constant::Float(val) => {
+                tag_string = "Float";
+                let sign_string = if val.is_sign_negative() {
+                    "-"
+                } else {
+                    ""
+                };
+                if val.is_nan() {
+                    arg_string = format!("{}NaN", sign_string);
+                } else if val.is_infinite() {
+                    arg_string = format!("{}Infinity", sign_string);
+                } else {
+                    arg_string = format!("{:.8E}", val);
+                }
+                arg_string = format!("{}f", arg_string);
+            }
+            cp::Constant::Double(val) => {
+                tag_string = "Double";
+                let sign_string = if val.is_sign_negative() {
+                    "-"
+                } else {
+                    ""
+                };
+                if val.is_nan() {
+                    arg_string = format!("{}NaN", sign_string);
+                } else if val.is_infinite() {
+                    arg_string = format!("{}Infinity", sign_string);
+                } else {
+                    arg_string = format!("{:.16E}", val);
+                }
+                arg_string = format!("{}d", arg_string);
             }
             _ => {}
         }
@@ -188,6 +224,9 @@ impl Disassemble for cp::ConstantPool {
         }
         write!(fmt.out, "Constant pool:\n");
         for (i, tag) in self.iter().enumerate() {
+            if let cp::Constant::Skip = *tag {
+                continue;
+            }
             let index = format!("#{}", i + 1);
             write!(fmt.out, "  {:>1$} = ", index, magnitude + 1);
             tag.pretty_print(fmt, opts);
@@ -258,13 +297,13 @@ impl Disassemble for method::MethodInfo {
         } else {
             ""
         };
-        let method_name = opts.constant_pool[self.name_index].as_utf8();
+        let method_name = opts.constants[self.name_index].as_utf8();
         write!(fmt.out, "{}{} {};\n", access_mode, scope, method_name);
-        let method_descriptor = opts.constant_pool[self.descriptor_index].as_utf8();
+        let method_descriptor = opts.constants[self.descriptor_index].as_utf8();
         if opts.verbose {
             write!(fmt.out, "    descriptor: {}\n", method_descriptor);
             write!(fmt.out, "    flags: {:?}\n", self.access_flags);
-            for attr in self.attributes.iter() {
+            for attr in self.attrs.iter() {
                 attr.pretty_print(fmt, opts);
             }
         }

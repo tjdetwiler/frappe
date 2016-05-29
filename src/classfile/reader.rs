@@ -1,4 +1,5 @@
 use std::io;
+use std::mem::transmute;
 
 use byteorder::{BigEndian, ReadBytesExt};
 
@@ -37,7 +38,7 @@ impl<T: io::Read> ClassReader<T> {
         let magic = try!(self.read_u32());
         let minor_version = try!(self.read_u16());
         let major_version = try!(self.read_u16());
-        let constant_pool = try!(self.read_constant_pool());
+        let constants = try!(self.read_constant_pool());
         let access_flags = try!(self.read_u16());
         let this_class = try!(self.read_u16());
         let super_class = try!(self.read_u16());
@@ -47,59 +48,58 @@ impl<T: io::Read> ClassReader<T> {
             let entry = try!(self.read_u16());
             interfaces.push(entry);
         }
-        let fields = try!(self.read_fields(&constant_pool));
-        let methods = try!(self.read_methods(&constant_pool));
-        let attributes = try!(self.read_attributes(&constant_pool, AttributeLocation::ClassFile));
+        let fields = try!(self.read_fields(&constants));
+        let methods = try!(self.read_methods(&constants));
+        let attributes = try!(self.read_attributes(&constants, AttributeLocation::ClassFile));
 
         Ok(ClassFile {
             magic: magic,
             minor_version: minor_version,
             major_version: major_version,
-            constant_pool: constant_pool,
+            constants: constants,
             access_flags: ClassAccessFlags::from_bits_truncate(access_flags),
             this_class: this_class,
             super_class: super_class,
             interfaces: interfaces,
             fields: fields,
             methods: methods,
-            attributes: attributes,
+            attrs: attributes,
         })
     }
 
-    fn read_methods(&mut self, constant_pool: &ConstantPool) -> Result<Vec<MethodInfo>> {
+    fn read_methods(&mut self, constants: &ConstantPool) -> Result<Vec<MethodInfo>> {
         let methods_count = try!(self.read_u16());
         let mut methods: Vec<MethodInfo> = vec![];
         for _ in 0..methods_count {
             let access_flags = try!(self.read_u16());
             let name_index = try!(self.read_u16());
             let descriptor_index = try!(self.read_u16());
-            let attributes =
-                try!(self.read_attributes(constant_pool, AttributeLocation::MethodInfo));
+            let attributes = try!(self.read_attributes(constants, AttributeLocation::MethodInfo));
             let entry = MethodInfo {
                 access_flags: MethodAccessFlags::from_bits_truncate(access_flags),
                 name_index: name_index,
                 descriptor_index: descriptor_index,
-                attributes: attributes,
+                attrs: attributes,
             };
             methods.push(entry);
         }
         Ok(methods)
     }
 
-    fn read_fields(&mut self, constant_pool: &ConstantPool) -> Result<Vec<FieldInfo>> {
+    fn read_fields(&mut self, constants: &ConstantPool) -> Result<Vec<FieldInfo>> {
         let fields_count = try!(self.read_u16());
         let mut fields: Vec<FieldInfo> = vec![];
         for _ in 0..fields_count {
             let access_flags = try!(self.read_u16());
             let name_index = try!(self.read_u16());
             let descriptor_index = try!(self.read_u16());
-            let attributes: Attributes = try!(self.read_attributes(constant_pool,
+            let attributes: Attributes = try!(self.read_attributes(constants,
                                                                    AttributeLocation::FieldInfo));
             let entry = FieldInfo {
                 access_flags: FieldAccessFlags::from_bits_truncate(access_flags),
                 name_index: name_index,
                 descriptor_index: descriptor_index,
-                attributes: attributes,
+                attrs: attributes,
             };
             fields.push(entry);
         }
@@ -108,8 +108,14 @@ impl<T: io::Read> ClassReader<T> {
 
     fn read_constant_pool(&mut self) -> Result<ConstantPool> {
         let size = try!(self.read_u16());
-        let mut constant_pool: Vec<Constant> = vec![];
+        let mut constants: Vec<Constant> = vec![];
+        let mut skip_next_index = false;
         for _ in 0..(size - 1) {
+            if skip_next_index {
+                skip_next_index = false;
+                constants.push(Constant::Skip);
+                continue;
+            }
             let tag = try!(self.read_u8());
             let entry = match tag {
                 CONSTANT_UTF8 => {
@@ -128,23 +134,27 @@ impl<T: io::Read> ClassReader<T> {
                 }
                 CONSTANT_FLOAT => {
                     let bytes = try!(self.read_u32());
-                    Ok(Constant::Float { bytes: bytes })
+                    unsafe {
+                        let float: f32 = transmute(bytes);
+                        Ok(Constant::Float(float))
+                    }
                 }
                 CONSTANT_LONG => {
-                    let high_bytes = try!(self.read_u32());
-                    let low_bytes = try!(self.read_u32());
-                    Ok(Constant::Long {
-                        high_bytes: high_bytes,
-                        low_bytes: low_bytes,
-                    })
+                    skip_next_index = true;
+                    let high_bytes: u64 = try!(self.read_u32()) as u64;
+                    let low_bytes: u64 = try!(self.read_u32()) as u64;
+                    let long_value: u64 = high_bytes << 32 | low_bytes;
+                    Ok(Constant::Long(long_value as i64))
                 }
                 CONSTANT_DOUBLE => {
-                    let high_bytes = try!(self.read_u32());
-                    let low_bytes = try!(self.read_u32());
-                    Ok(Constant::Double {
-                        high_bytes: high_bytes,
-                        low_bytes: low_bytes,
-                    })
+                    skip_next_index = true;
+                    let high_bytes: u64 = try!(self.read_u32()) as u64;
+                    let low_bytes: u64 = try!(self.read_u32()) as u64;
+                    let long_value: u64 = high_bytes << 32 | low_bytes;
+                    unsafe {
+                        let double_value: f64 = transmute(long_value);
+                        Ok(Constant::Double(double_value))
+                    }
                 }
                 CONSTANT_CLASS => {
                     let name_index = try!(self.read_u16());
@@ -209,27 +219,27 @@ impl<T: io::Read> ClassReader<T> {
                 _ => Err(Error::InvalidConstantPoolTag(tag)),
             };
             let entry = try!(entry);
-            constant_pool.push(entry);
+            constants.push(entry);
         }
-        Ok(ConstantPool { pool: constant_pool })
+        Ok(ConstantPool::new(constants))
     }
 
     fn read_attributes(&mut self,
-                       constant_pool: &ConstantPool,
+                       constants: &ConstantPool,
                        location: AttributeLocation)
                        -> Result<Attributes> {
         let num_attributes = try!(self.read_u16());
         let mut attributes: Vec<AttributeInfo> = vec![];
         for _ in 0..num_attributes {
-            let attribute_info = try!(self.read_attribute(constant_pool));
+            let attribute_info = try!(self.read_attribute(constants));
             attributes.push(attribute_info);
         }
         Ok(Attributes::new(location, attributes))
     }
 
-    fn read_attribute(&mut self, constant_pool: &ConstantPool) -> Result<AttributeInfo> {
+    fn read_attribute(&mut self, constants: &ConstantPool) -> Result<AttributeInfo> {
         let name_index = try!(self.read_u16());
-        if let Constant::Utf8(ref attribute_name) = constant_pool[name_index] {
+        if let Constant::Utf8(ref attribute_name) = constants[name_index] {
             let attribute_length = try!(self.read_u32());
             match attribute_name.as_ref() {
                 "SourceFile" => {
@@ -263,7 +273,7 @@ impl<T: io::Read> ClassReader<T> {
                 }
                 "ConstantValue" => {
                     let constantvalue_index = try!(self.read_u16());
-                    Ok(AttributeInfo::ConstantValue { constantvalue_index: constantvalue_index })
+                    Ok(AttributeInfo::ConstantValue(constantvalue_index))
                 }
                 "Code" => {
                     let max_stack = try!(self.read_u16());
@@ -280,14 +290,13 @@ impl<T: io::Read> ClassReader<T> {
                         let exception_info = try!(self.read_exception_info());
                         exception_table.push(exception_info);
                     }
-                    let attributes = try!(self.read_attributes(constant_pool,
-                                                               AttributeLocation::Code));
+                    let attributes = try!(self.read_attributes(constants, AttributeLocation::Code));
                     Ok(AttributeInfo::Code(Box::new(CodeAttribute {
                         max_stack: max_stack,
                         max_locals: max_locals,
                         code: code,
                         exception_table: exception_table,
-                        attributes: attributes,
+                        attrs: attributes,
                     })))
                 }
                 "Exceptions" => {

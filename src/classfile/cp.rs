@@ -2,12 +2,16 @@ use std::ops::{Deref, Index};
 
 #[derive(Debug)]
 pub struct ConstantPool {
-    pub pool: Vec<Constant>,
+    constants: Vec<Constant>,
 }
 
 impl ConstantPool {
+    pub fn new(constants: Vec<Constant>) -> ConstantPool {
+        ConstantPool { constants: constants }
+    }
+
     pub fn len(&self) -> u16 {
-        self.pool.len() as u16 + 1
+        self.constants.len() as u16 + 1
     }
 }
 
@@ -15,7 +19,7 @@ impl Index<u16> for ConstantPool {
     type Output = Constant;
 
     fn index<'a>(&'a self, index: u16) -> &'a Constant {
-        &self.pool[index as usize - 1]
+        &self.constants[index as usize - 1]
     }
 }
 
@@ -23,7 +27,7 @@ impl Deref for ConstantPool {
     type Target = Vec<Constant>;
 
     fn deref(&self) -> &Vec<Constant> {
-        &self.pool
+        &self.constants
     }
 }
 
@@ -51,7 +55,7 @@ pub struct NameAndTypeConstant {
 }
 
 /// Represents a single entry in the constant pool.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Constant {
     Class(u16),
     Fieldref(TypedEntityConstant),
@@ -59,17 +63,9 @@ pub enum Constant {
     InterfaceMethodref(TypedEntityConstant),
     String(u16),
     Integer(i32),
-    Float {
-        bytes: u32,
-    },
-    Long {
-        high_bytes: u32,
-        low_bytes: u32,
-    },
-    Double {
-        high_bytes: u32,
-        low_bytes: u32,
-    },
+    Float(f32),
+    Long(i64),
+    Double(f64),
     NameAndType(NameAndTypeConstant),
     Utf8(String),
     MethodHandle {
@@ -83,10 +79,14 @@ pub enum Constant {
         bootstrap_method_attr_index: u16,
         name_and_type_index: u16,
     },
+    /// A pseudo-constant that is inserted in the empty indicies following the 8
+    /// byte constant values (Double/Long).
+    Skip,
 }
 
 impl Constant {
-    fn name(&self) -> &str {
+    /// Returns a human-readable name of this constant variant.
+    pub fn name(&self) -> &str {
         match *self {
             Constant::Class(_) => "Class",
             Constant::Fieldref(_) => "Fieldref",
@@ -94,18 +94,19 @@ impl Constant {
             Constant::InterfaceMethodref(_) => "InterfaceMethodref",
             Constant::String(_) => "String",
             Constant::Integer(_) => "Integer",
-            Constant::Float { .. } => "Float",
-            Constant::Long { .. } => "Long",
-            Constant::Double { .. } => "Double",
+            Constant::Float(_) => "Float",
+            Constant::Long(_) => "Long",
+            Constant::Double(_) => "Double",
             Constant::NameAndType(_) => "NameAndType",
             Constant::Utf8(_) => "Utf8",
             Constant::MethodHandle { .. } => "MethodHandle",
             Constant::MethodType { .. } => "MethodType",
             Constant::InvokeDynamic { .. } => "InvokeDynamic",
-
+            Constant::Skip => "Skip",
         }
     }
 
+    /// Asserts that this constant is a `Constant::Class` and returns the class name index.
     pub fn as_class(&self) -> u16 {
         match *self {
             Constant::Class(class) => class,
@@ -116,6 +117,8 @@ impl Constant {
         }
     }
 
+    /// Asserts that this constant is a `Constant::Fieldref` and returns the associated
+    /// data.
     pub fn as_fieldref(&self) -> &TypedEntityConstant {
         match *self {
             Constant::Fieldref(ref entity) => entity,
@@ -126,6 +129,8 @@ impl Constant {
         }
     }
 
+    /// Asserts that this constant is a `Constant::Methodref` and returns the associated
+    /// data.
     pub fn as_methodref(&self) -> &TypedEntityConstant {
         match *self {
             Constant::Methodref(ref entity) => entity,
@@ -136,6 +141,8 @@ impl Constant {
         }
     }
 
+    /// Asserts that this constant is a `Constant::InterfaceMethodref` and returns the
+    /// associated data.
     pub fn as_interface_methodref(&self) -> &TypedEntityConstant {
         match *self {
             Constant::InterfaceMethodref(ref entity) => entity,
@@ -146,6 +153,8 @@ impl Constant {
         }
     }
 
+    /// Asserts that this constant is a `Constant::String` and returns the index of the
+    /// string value (a `Constant::Utf8`).
     pub fn as_string(&self) -> u16 {
         match *self {
             Constant::String(name_index) => name_index,
@@ -156,6 +165,7 @@ impl Constant {
         }
     }
 
+    /// Asserts that this constant is a `Constant::Utf8` and returns the associated string.
     pub fn as_utf8(&self) -> &String {
         match *self {
             Constant::Utf8(ref value) => value,
@@ -166,6 +176,51 @@ impl Constant {
         }
     }
 
+    /// Asserts that this constant is a `Constant::Integer` and returns the associated value.
+    pub fn as_integer(&self) -> i32 {
+        match *self {
+            Constant::Integer(value) => value,
+            _ => {
+                panic!("Constant is of incorrect type! Expected Integer but was {}",
+                       self.name())
+            }
+        }
+    }
+
+    /// Asserts that this constant is a `Constant::Long` and returns the associated value.
+    pub fn as_long(&self) -> i64 {
+        match *self {
+            Constant::Long(value) => value,
+            _ => {
+                panic!("Constant is of incorrect type! Expected Long but was {}",
+                       self.name())
+            }
+        }
+    }
+
+    /// Asserts that this constant is a `Constant::Float` and returns the associated value.
+    pub fn as_float(&self) -> f32 {
+        match *self {
+            Constant::Float(value) => value,
+            _ => {
+                panic!("Constant is of incorrect type! Expected Float but was {}",
+                       self.name())
+            }
+        }
+    }
+
+    /// Asserts that this constant is a `Constant::Double` and returns the associated value.
+    pub fn as_double(&self) -> f64 {
+        match *self {
+            Constant::Double(value) => value,
+            _ => {
+                panic!("Constant is of incorrect type! Expected Float but was {}",
+                       self.name())
+            }
+        }
+    }
+
+    /// Asserts that this constant is a `Constant::NameAndType` and returns the associated data.
     pub fn as_name_and_type(&self) -> &NameAndTypeConstant {
         match *self {
             Constant::NameAndType(ref name_and_type) => name_and_type,

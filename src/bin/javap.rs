@@ -20,7 +20,7 @@ fn main() {
     let class = ClassReader::new(class_file).read_class().unwrap();
     let opts = Options {
         verbose: verbose,
-        constant_pool: &class.constant_pool,
+        constants: &class.constants,
     };
     class.pretty_print(&mut fmt, &opts);
 }

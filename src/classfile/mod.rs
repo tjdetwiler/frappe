@@ -25,7 +25,7 @@ pub struct ClassFile {
     pub major_version: u16,
     /// Classfile constant pool. Contains constant values (integer, long, string, etc)
     /// as well as metadata about classes and types.
-    pub constant_pool: ConstantPool,
+    pub constants: ConstantPool,
     /// Access flags for this class.
     pub access_flags: ClassAccessFlags,
     /// Index into the constant pool that resolves to a `Constant::Class` value.
@@ -42,15 +42,15 @@ pub struct ClassFile {
     /// A list of field descriptors that identify the methods of this class.
     pub methods: Vec<MethodInfo>,
     /// A list of attributes applied to this class.
-    pub attributes: Attributes,
+    pub attrs: Attributes,
 }
 
 impl ClassFile {
     /// Resolves the `this_class` member to the UTF8 string in the constant pool
     /// that holds the class name.
     pub fn this_class_name(&self) -> &String {
-        let name_index = self.constant_pool[self.this_class].as_class();
-        self.constant_pool[name_index].as_utf8()
+        let name_index = self.constants[self.this_class].as_class();
+        self.constants[name_index].as_utf8()
     }
 
     /// Resolves the `super_class` member to the UTF8 string in the constant pool
@@ -60,13 +60,13 @@ impl ClassFile {
         if self.super_class == 0 {
             return None;
         }
-        let name_index = self.constant_pool[self.super_class].as_class();
-        Some(self.constant_pool[name_index].as_utf8())
+        let name_index = self.constants[self.super_class].as_class();
+        Some(self.constants[name_index].as_utf8())
     }
 
     pub fn find_method(&self, method_name: &str) -> Option<&MethodInfo> {
         for method in self.methods.iter() {
-            let name = self.constant_pool[method.name_index].as_utf8();
+            let name = self.constants[method.name_index].as_utf8();
             if name == method_name {
                 return Some(method);
             }
@@ -76,7 +76,7 @@ impl ClassFile {
 
     pub fn find_field(&self, field_name: &str) -> Option<&FieldInfo> {
         for field in self.fields.iter() {
-            let name = self.constant_pool[field.name_index].as_utf8();
+            let name = self.constants[field.name_index].as_utf8();
             if name == field_name {
                 return Some(field);
             }
@@ -95,7 +95,6 @@ bitflags! {
         const CLASS_ACC_SYNTHETIC     = 0x1000,
         const CLASS_ACC_ANNOTATION    = 0x2000,
         const CLASS_ACC_ENUM          = 0x4000
-
     }
 }
 
