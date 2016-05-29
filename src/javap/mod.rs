@@ -49,11 +49,8 @@ pub trait Disassemble {
 
 impl Disassemble for ClassFile {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
-        for attribute in self.attrs.iter() {
-            if let AttributeInfo::SourceFile(sourcefile_index) = *attribute {
-                let source_file = &self.constants[sourcefile_index];
-                write!(fmt.out, "Compiled from \"{}\"\n", source_file.as_utf8());
-            }
+        if let Some(source_file) = self.attrs.source_file(&self.constants) {
+            try!(write!(fmt.out, "  Compiled from \"{}\"\n", source_file));
         }
         let class_name = self.this_class_name();
         let class_name = class_name.replace("/", ".");
@@ -69,23 +66,23 @@ impl Disassemble for ClassFile {
         } else {
             "class"
         };
-        write!(fmt.out, "{}{} {}", access_mode, class_type, class_name);
+        try!(write!(fmt.out, "{}{} {}", access_mode, class_type, class_name));
         if let Some(super_class_name) = self.super_class_name() {
             if !(super_class_name == "java/lang/Object") {
                 let super_class_name = super_class_name.replace("/", ".");
-                write!(fmt.out, " extends {} ", super_class_name);
+                try!(write!(fmt.out, " extends {} ", super_class_name));
             }
         }
         if opts.verbose {
-            write!(fmt.out, "\n");
-            write!(fmt.out, "  minor version: {}\n", self.minor_version);
-            write!(fmt.out, "  major version: {}\n", self.major_version);
-            write!(fmt.out, "  flags: {}\n", self.access_flags);
-            self.constants.pretty_print(fmt, opts);
+            try!(write!(fmt.out, "\n"));
+            try!(write!(fmt.out, "  minor version: {}\n", self.minor_version));
+            try!(write!(fmt.out, "  major version: {}\n", self.major_version));
+            try!(write!(fmt.out, "  flags: {}\n", self.access_flags));
+            try!(self.constants.pretty_print(fmt, opts));
         }
-        write!(fmt.out, "{{\n");
-        self.methods.pretty_print(fmt, opts);
-        write!(fmt.out, "}}");
+        try!(write!(fmt.out, "{{\n"));
+        try!(self.methods.pretty_print(fmt, opts));
+        try!(write!(fmt.out, "}}"));
         Ok(())
     }
 }
@@ -202,11 +199,11 @@ impl Disassemble for cp::Constant {
             _ => {}
         }
         let comment_string = comment_string.map_or(String::new(), |s| format!("// {}", s));
-        write!(fmt.out,
-               "{:<19}{:<15}{}",
-               tag_string,
-               arg_string,
-               comment_string);
+        try!(write!(fmt.out,
+                    "{:<19}{:<15}{}",
+                    tag_string,
+                    arg_string,
+                    comment_string));
         Ok(())
     }
 }
@@ -222,15 +219,15 @@ impl Disassemble for cp::ConstantPool {
             }
             magnitude = magnitude + 1;
         }
-        write!(fmt.out, "Constant pool:\n");
+        try!(write!(fmt.out, "Constant pool:\n"));
         for (i, tag) in self.iter().enumerate() {
             if let cp::Constant::Skip = *tag {
                 continue;
             }
             let index = format!("#{}", i + 1);
-            write!(fmt.out, "  {:>1$} = ", index, magnitude + 1);
-            tag.pretty_print(fmt, opts);
-            write!(fmt.out, "\n");
+            try!(write!(fmt.out, "  {:>1$} = ", index, magnitude + 1));
+            try!(tag.pretty_print(fmt, opts));
+            try!(write!(fmt.out, "\n"));
         }
         Ok(())
     }
@@ -239,8 +236,8 @@ impl Disassemble for cp::ConstantPool {
 impl Disassemble for Vec<method::MethodInfo> {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         for method in self.iter() {
-            method.pretty_print(fmt, opts);
-            write!(fmt.out, "\n");
+            try!(method.pretty_print(fmt, opts));
+            try!(write!(fmt.out, "\n"));
         }
         Ok(())
     }
@@ -249,8 +246,8 @@ impl Disassemble for Vec<method::MethodInfo> {
 impl Disassemble for Attributes {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         for attr in self.iter() {
-            attr.pretty_print(fmt, opts);
-            write!(fmt.out, "\n");
+            try!(attr.pretty_print(fmt, opts));
+            try!(write!(fmt.out, "\n"));
         }
         Ok(())
     }
@@ -259,20 +256,20 @@ impl Disassemble for Attributes {
 impl Disassemble for AttributeInfo {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         match *self {
-            AttributeInfo::SourceFile(sourcefile_index) => {
-                write!(fmt.out, "SourceFile");
+            AttributeInfo::SourceFile(_) => {
+                try!(write!(fmt.out, "SourceFile"));
             }
             AttributeInfo::AnnotationDefault(ref element_value) => {
-                write!(fmt.out, "AnnotationDefault:\n");
-                write!(fmt.out, "  default_value: ");
-                element_value.pretty_print(fmt, opts);
-                write!(fmt.out, "\n");
+                try!(write!(fmt.out, "AnnotationDefault:\n"));
+                try!(write!(fmt.out, "  default_value: "));
+                try!(element_value.pretty_print(fmt, opts));
+                try!(write!(fmt.out, "\n"));
             }
             AttributeInfo::Code(ref code) => {
-                code.pretty_print(fmt, opts);
+                try!(code.pretty_print(fmt, opts));
             }
             _ => {
-                write!(fmt.out, "Other");
+                try!(write!(fmt.out, "Other"));
             }
         }
         Ok(())
@@ -281,7 +278,7 @@ impl Disassemble for AttributeInfo {
 
 impl Disassemble for method::MethodInfo {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
-        write!(fmt.out, "  ");
+        try!(write!(fmt.out, "  "));
         let access_mode = if self.access_flags.is_public() {
             "public"
         } else if self.access_flags.is_private() {
@@ -298,13 +295,13 @@ impl Disassemble for method::MethodInfo {
             ""
         };
         let method_name = opts.constants[self.name_index].as_utf8();
-        write!(fmt.out, "{}{} {};\n", access_mode, scope, method_name);
+        try!(write!(fmt.out, "{}{} {};\n", access_mode, scope, method_name));
         let method_descriptor = opts.constants[self.descriptor_index].as_utf8();
         if opts.verbose {
-            write!(fmt.out, "    descriptor: {}\n", method_descriptor);
-            write!(fmt.out, "    flags: {:?}\n", self.access_flags);
+            try!(write!(fmt.out, "    descriptor: {}\n", method_descriptor));
+            try!(write!(fmt.out, "    flags: {:?}\n", self.access_flags));
             for attr in self.attrs.iter() {
-                attr.pretty_print(fmt, opts);
+                try!(attr.pretty_print(fmt, opts));
             }
         }
         Ok(())
@@ -312,16 +309,16 @@ impl Disassemble for method::MethodInfo {
 }
 
 impl Disassemble for ElementValue {
-    fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
+    fn pretty_print(&self, fmt: &mut Formatter, _: &Options) -> io::Result<()> {
         match *self {
             ElementValue::ConstantValue(ref constant_value) => {
-                write!(fmt.out,
-                       "{}#{}",
-                       constant_value.tag as char,
-                       constant_value.const_value_index);
+                try!(write!(fmt.out,
+                            "{}#{}",
+                            constant_value.tag as char,
+                            constant_value.const_value_index));
             }
             _ => {
-                write!(fmt.out, "Unsupported ElementValue!");
+                try!(write!(fmt.out, "Unsupported ElementValue!"));
             }
         }
         Ok(())
@@ -329,12 +326,12 @@ impl Disassemble for ElementValue {
 }
 
 impl Disassemble for CodeAttribute {
-    fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
-        write!(fmt.out,
-               "      stack={}, locals={}, args_size={}\n",
-               self.max_stack,
-               self.max_locals,
-               "TODO!");
+    fn pretty_print(&self, fmt: &mut Formatter, _: &Options) -> io::Result<()> {
+        try!(write!(fmt.out,
+                    "      stack={}, locals={}, args_size={}\n",
+                    self.max_stack,
+                    self.max_locals,
+                    "TODO!"));
         Ok(())
     }
 }
