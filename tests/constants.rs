@@ -4,8 +4,7 @@ use std::f32;
 use std::f64;
 use std::fs::File;
 
-use frappe::classfile::ClassFile;
-use frappe::classfile::cp;
+use frappe::classfile::*;
 use frappe::classfile::reader::ClassReader;
 
 macro_rules! assert_float_eq {
@@ -103,7 +102,7 @@ fn should_constants_class() {
         "Object fields should not have a ConstantValue attribute");
 }
 
-fn get_const_value<'a>(field_name: &str, class: &'a ClassFile) -> &'a cp::Constant {
+fn get_const_value<'a>(field_name: &str, class: &'a ClassFile) -> &'a Constant {
     println!("looking up field {}", field_name);
     let field = class.find_field(field_name).unwrap();
     let const_value_index = field.attrs.constant_value().unwrap();

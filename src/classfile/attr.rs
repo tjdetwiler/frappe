@@ -1,7 +1,7 @@
 use std::vec::Vec;
 use std::ops::Deref;
 
-use classfile::cp::ConstantPool;
+use classfile::ConstantPool;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum TargetInfo {
@@ -257,6 +257,16 @@ impl Deref for Attributes {
 }
 
 impl Attributes {
+    /// Constructs a new attribute collection.
+    ///
+    /// The value of `location` indicates what entity these attributes belong to
+    /// and can be used to verify no illegal attributes have been provided.
+    ///
+    /// # Examples
+    /// // The following constructs an empty set of field attributes.
+    /// let mut attrs = Attributes::new(
+    ///     AttributeLocation::FieldInfo,
+    ///     vec![]);
     pub fn new(location: AttributeLocation, attributes: Vec<AttributeInfo>) -> Attributes {
         Attributes {
             location: location,
@@ -270,6 +280,10 @@ impl Attributes {
 
     /// Resolves the source file attribute in this class if it exists and returns
     /// the value. If there is no source file attribute then `None` is returned.
+    ///
+    /// # Panics
+    /// If the `sourcefile_index` value does not point to a `Constant::Utf8` entry
+    /// in the constant pool.
     pub fn source_file<'a>(&self, cp: &'a ConstantPool) -> Option<&'a String> {
         for attr in self.attributes.iter() {
             if let AttributeInfo::SourceFile(sourcefile_index) = *attr {
@@ -371,6 +385,10 @@ impl Attributes {
 
     /// Resolves the signature attribute to a UTF8 string if present. Otherwise
     /// returns `None`.
+    ///
+    /// # Panics
+    /// If the `signature_index` value does not point to a `Constant::Utf8` entry
+    /// in the constant pool.
     pub fn signature<'a>(&self, cp: &'a ConstantPool) -> Option<&'a String> {
         for attr in self.attributes.iter() {
             if let AttributeInfo::Signature(signature_index) = *attr {

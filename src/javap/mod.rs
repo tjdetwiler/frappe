@@ -1,9 +1,6 @@
 use std::io;
 
-use classfile::ClassFile;
-use classfile::attr::*;
-use classfile::cp;
-use classfile::method;
+use classfile::*;
 
 pub struct Formatter {
     indent: usize,
@@ -40,7 +37,7 @@ impl Formatter {
 
 pub struct Options<'a> {
     pub verbose: bool,
-    pub constants: &'a cp::ConstantPool,
+    pub constants: &'a ConstantPool,
 }
 
 pub trait Disassemble {
@@ -87,9 +84,7 @@ impl Disassemble for ClassFile {
     }
 }
 
-fn generate_typed_entity_comment_string(cp: &cp::ConstantPool,
-                                        entity: &cp::TypedEntityConstant)
-                                        -> String {
+fn generate_typed_entity_comment_string(cp: &ConstantPool, entity: &TypedEntityConstant) -> String {
     let class_info = cp[entity.class_index].as_class();
     let class_name = cp[class_info].as_utf8();
     let entity_info = cp[entity.name_and_type_index].as_name_and_type();
@@ -103,13 +98,13 @@ fn generate_typed_entity_comment_string(cp: &cp::ConstantPool,
 
 }
 
-impl Disassemble for cp::Constant {
+impl Disassemble for Constant {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         let mut tag_string = "";
         let mut arg_string = String::new();
         let mut comment_string: Option<String> = None;
         match *self {
-            cp::Constant::Methodref(ref method_tag) => {
+            Constant::Methodref(ref method_tag) => {
                 tag_string = "Methodref";
                 arg_string = format!("#{}.#{}",
                                      method_tag.class_index,
@@ -117,7 +112,7 @@ impl Disassemble for cp::Constant {
                 comment_string = Some(generate_typed_entity_comment_string(opts.constants,
                                                                            method_tag));
             }
-            cp::Constant::Fieldref(ref field_tag) => {
+            Constant::Fieldref(ref field_tag) => {
                 tag_string = "Fieldref";
                 arg_string = format!("#{}.#{}",
                                      field_tag.class_index,
@@ -125,7 +120,7 @@ impl Disassemble for cp::Constant {
                 comment_string = Some(generate_typed_entity_comment_string(opts.constants,
                                                                            field_tag));
             }
-            cp::Constant::InterfaceMethodref(ref method_tag) => {
+            Constant::InterfaceMethodref(ref method_tag) => {
                 tag_string = "InterfaceMethodref";
                 arg_string = format!("#{}.#{}",
                                      method_tag.class_index,
@@ -133,38 +128,38 @@ impl Disassemble for cp::Constant {
                 comment_string = Some(generate_typed_entity_comment_string(opts.constants,
                                                                            method_tag));
             }
-            cp::Constant::String(string_index) => {
+            Constant::String(string_index) => {
                 tag_string = "String";
                 arg_string = format!("#{}", string_index);
                 let string = opts.constants[string_index].as_utf8();
                 comment_string = Some(format!("{}", string));
             }
-            cp::Constant::Class(name_index) => {
+            Constant::Class(name_index) => {
                 tag_string = "Class";
                 arg_string = format!("#{}", name_index);
                 let class_name = opts.constants[name_index].as_utf8();
                 comment_string = Some(format!("{}", class_name));
             }
-            cp::Constant::Utf8(ref string) => {
+            Constant::Utf8(ref string) => {
                 tag_string = "Utf8";
                 arg_string = format!("{}", string);
             }
-            cp::Constant::NameAndType(cp::NameAndTypeConstant { name_index, descriptor_index }) => {
+            Constant::NameAndType(NameAndTypeConstant { name_index, descriptor_index }) => {
                 tag_string = "NameAndType";
                 arg_string = format!("#{}:#{}", name_index, descriptor_index);
                 let method_name = opts.constants[name_index].as_utf8();
                 let method_type = opts.constants[descriptor_index].as_utf8();
                 comment_string = Some(format!("{}:{}", method_name, method_type));
             }
-            cp::Constant::Integer(val) => {
+            Constant::Integer(val) => {
                 tag_string = "Integer";
                 arg_string = format!("{}", val);
             }
-            cp::Constant::Long(val) => {
+            Constant::Long(val) => {
                 tag_string = "Long";
                 arg_string = format!("{}l", val);
             }
-            cp::Constant::Float(val) => {
+            Constant::Float(val) => {
                 tag_string = "Float";
                 let sign_string = if val.is_sign_negative() {
                     "-"
@@ -180,7 +175,7 @@ impl Disassemble for cp::Constant {
                 }
                 arg_string = format!("{}f", arg_string);
             }
-            cp::Constant::Double(val) => {
+            Constant::Double(val) => {
                 tag_string = "Double";
                 let sign_string = if val.is_sign_negative() {
                     "-"
@@ -208,7 +203,7 @@ impl Disassemble for cp::Constant {
     }
 }
 
-impl Disassemble for cp::ConstantPool {
+impl Disassemble for ConstantPool {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         let mut magnitude = 1;
         let mut entries = self.len();
@@ -221,7 +216,7 @@ impl Disassemble for cp::ConstantPool {
         }
         try!(write!(fmt.out, "Constant pool:\n"));
         for (i, tag) in self.iter().enumerate() {
-            if let cp::Constant::Skip = *tag {
+            if let Constant::Skip = *tag {
                 continue;
             }
             let index = format!("#{}", i + 1);
@@ -233,7 +228,7 @@ impl Disassemble for cp::ConstantPool {
     }
 }
 
-impl Disassemble for Vec<method::MethodInfo> {
+impl Disassemble for Vec<MethodInfo> {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         for method in self.iter() {
             try!(method.pretty_print(fmt, opts));
@@ -276,7 +271,7 @@ impl Disassemble for AttributeInfo {
     }
 }
 
-impl Disassemble for method::MethodInfo {
+impl Disassemble for MethodInfo {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
         try!(write!(fmt.out, "  "));
         let access_mode = if self.access_flags.is_public() {

@@ -1,4 +1,4 @@
-use classfile::attr::Attributes;
+use classfile::Attributes;
 
 bitflags! {
 /// Holds the
