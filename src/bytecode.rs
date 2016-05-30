@@ -1,4 +1,5 @@
 #[allow(non_camel_case_types)]
+#[derive(Debug)]
 pub enum Bytecode {
     aaload,
     aastore,
@@ -402,9 +403,10 @@ macro_rules! bytecode {
     }};
 }
 
+#[derive(Debug)]
 pub struct DecodeResult {
-    bytecode: Bytecode,
-    consumed: usize,
+    pub bytecode: Bytecode,
+    pub consumed: usize,
 }
 
 impl Bytecode {
@@ -412,7 +414,7 @@ impl Bytecode {
     ///
     /// Returns the decoded bytecode and how many bytes from the instruction
     /// stream were consumed by this decoded instruction.
-    pub fn decode(code: &[u8], pc: u16) -> DecodeResult {
+    pub fn decode(code: &[u8], pc: usize) -> DecodeResult {
         match code[0] {
             0x00 => bytecode!(nop),
             0x01 => bytecode!(aconst_null),

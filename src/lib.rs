@@ -7,6 +7,7 @@ extern crate env_logger;
 
 pub mod classfile;
 pub mod util;
+pub mod bytecode;
 pub mod javap;
 
 #[cfg(test)]

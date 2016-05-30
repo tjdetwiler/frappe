@@ -12,4 +12,3 @@ mod constant_pool;
 pub use self::constant_pool::*;
 mod attr;
 pub use self::attr::*;
-pub mod bytecode;
