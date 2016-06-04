@@ -10,8 +10,3 @@ pub mod util;
 pub mod bytecode;
 pub mod javap;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {}
-}

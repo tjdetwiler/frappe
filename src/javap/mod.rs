@@ -1,5 +1,5 @@
 use std::io;
-use std::io::{Error, ErrorKind};
+use std::fmt::Display;
 
 use classfile::*;
 use bytecode::*;
@@ -85,6 +85,7 @@ impl Disassemble for ClassFile {
         Ok(())
     }
 }
+
 
 fn generate_typed_entity_comment_string(cp: &ConstantPool, entity: &TypedEntityConstant) -> String {
     let class_info = cp[entity.class_index].as_class();
@@ -332,210 +333,299 @@ impl Disassemble for CodeAttribute {
         let length = self.code.len();
         let mut pc: usize = 0;
         while pc < length {
-            let result = Bytecode::decode(&self.code[pc..], pc);
+            let result = Bytecode::decode(&self.code, pc);
             try!(write!(fmt.out, "{:>8}: ", pc));
             try!(result.bytecode.pretty_print(fmt, opts));
             try!(write!(fmt.out, "\n"));
-            pc += result.consumed;
+            pc = result.newpc;
         }
         Ok(())
     }
 }
 
+macro_rules! no_arg_bytecode {
+    ($op:expr) => {
+        BytecodeFormat {
+            op: format!($op),
+            arg: None,
+            detail: None,
+        }
+    };
+    ($op:ident @ $n:expr) => {
+        BytecodeFormat {
+            op: format!("{}{}", stringify!($op), $n),
+            arg: None,
+            detail: None,
+        }
+    };
+}
+
+fn simple_arg<T: Display>(op: &str, value: T) -> BytecodeFormat {
+    BytecodeFormat {
+        op: format!("{}", op),
+        arg: Some(format!("{}", value)),
+        detail: None,
+    }
+}
+
+fn constant_arg_detail(index: u16, opts: &Options) -> Option<String> {
+    let cp = opts.constants;
+    match cp[index] {
+        Constant::Integer(int) => Some(format!("int {}", int)),
+        Constant::Long(long) => Some(format!("long {}", long)),
+        Constant::Float(float) => Some(format!("float {}", float)),
+        Constant::Double(double) => Some(format!("double {}", double)),
+        Constant::Class(name_index) => {
+            let name = cp[name_index].as_utf8();
+            Some(format!("class {}", name))
+        },
+        Constant::String(string_index) => {
+            let name = cp[string_index].as_utf8();
+            Some(format!("String {}", name))
+        },
+        Constant::Fieldref(ref entity) => {
+            let detail = generate_typed_entity_comment_string(cp, entity);
+            Some(format!("Field {}", detail))
+        },
+        Constant::Methodref(ref entity) => {
+            let detail = generate_typed_entity_comment_string(cp, entity);
+            Some(format!("Method {}", detail))
+        },
+        Constant::InterfaceMethodref(ref entity) => {
+            let detail = generate_typed_entity_comment_string(cp, entity);
+            Some(format!("InterfaceMethod {}", detail))
+        },
+        Constant::InvokeDynamic { bootstrap_method_attr_index, name_and_type_index } => {
+            let entity_info = cp[name_and_type_index].as_name_and_type();
+            let method_name = cp[entity_info.name_index].as_utf8();
+            let method_name = match method_name.as_ref() {
+                "<init>" | "<clinit>" => format!("\"{}\"", method_name),
+                _ => format!("{}", method_name),
+            };
+            let method_type = cp[entity_info.descriptor_index].as_utf8();
+            Some(format!("InvokeDynamic #{}:{}:{}",
+                         bootstrap_method_attr_index,
+                         method_name,
+                         method_type))
+        },
+        ref constant @ _ => panic!(format!("Unimplemented constant {:#?}", constant)),
+    }
+}
+
+fn constant_arg(op: &str, index: u16, opts: &Options) -> BytecodeFormat {
+    BytecodeFormat {
+        op: op.into(),
+        arg: Some(format!("#{}", index)),
+        detail: constant_arg_detail(index, opts),
+    }
+}
+
+struct BytecodeFormat {
+    op: String,
+    arg: Option<String>,
+    detail: Option<String>,
+}
+
 impl Disassemble for Bytecode {
     fn pretty_print(&self, fmt: &mut Formatter, opts: &Options) -> io::Result<()> {
-        let mut arg_string = String::new();
-        let mut comment_string = String::new();
-        let op_string = match *self {
-            Bytecode::nop => format!("nop"),
-            Bytecode::aconst_null => format!("aconst_null"),
-            Bytecode::iconst_i(i) if i < 0 => format!("iconst_m{}", i),
-            Bytecode::iconst_i(i) => format!("iconst_{}", i),
-            Bytecode::lconst_l(l) => format!("lconst_{}", l),
-            Bytecode::fconst_f(f) => format!("fconst_{}", f),
-            Bytecode::dconst_d(d) => format!("dconst_{}", d),
-            Bytecode::bipush { .. } => format!("bipush"),
-            Bytecode::sipush { .. }=> format!("sipush"),
-            Bytecode::ldc { .. }=> format!("ldc"),
-            Bytecode::ldc_w { .. }=> format!("ldc_w"),
-            Bytecode::ldc2_w { .. }=> format!("ldc2_w"),
-            Bytecode::iload { .. } => format!("iload"),
-            Bytecode::lload { .. } => format!("lload"),
-            Bytecode::fload { .. } => format!("fload"),
-            Bytecode::dload { .. } => format!("dload"),
-            Bytecode::aload { .. } => format!("aload"),
-            Bytecode::iload_n(n) => format!("iload_{}", n),
-            Bytecode::lload_n(n) => format!("lload_{}", n),
-            Bytecode::fload_n(n) => format!("fload_{}", n),
-            Bytecode::dload_n(n) => format!("dload_{}", n),
-            Bytecode::aload_n(n) => format!("aload_{}", n),
-            Bytecode::iaload => format!("iaload"),
-            Bytecode::laload => format!("laload"),
-            Bytecode::faload => format!("faload"),
-            Bytecode::daload => format!("daload"),
-            Bytecode::aaload => format!("aaload"),
-            Bytecode::baload => format!("baload"),
-            Bytecode::caload => format!("caload"),
-            Bytecode::saload => format!("sastore"),
-            Bytecode::istore => format!("istore"),
-            Bytecode::lstore => format!("lstore"),
-            Bytecode::fstore { .. } => format!("fstore"),
-            Bytecode::dstore { .. } => format!("dstore"),
-            Bytecode::astore { .. } => format!("astore"),
-            Bytecode::istore_n(n) => format!("istore_{}", n),
-            Bytecode::lstore_n(n) => format!("lstore_{}", n),
-            Bytecode::fstore_n(n) => format!("fstore_{}", n),
-            Bytecode::dstore_n(n) => format!("dstore_{}", n),
-            Bytecode::astore_n(n) => format!("astore_{}", n),
-            Bytecode::iastore => format!("iastore"),
-            Bytecode::lastore => format!("lastore"),
-            Bytecode::fastore => format!("fastore"),
-            Bytecode::dastore => format!("dastore"),
-            Bytecode::aastore => format!("aastore"),
-            Bytecode::bastore => format!("bastore"),
-            Bytecode::castore => format!("castore"),
-            Bytecode::sastore => format!("sastore"),
-            Bytecode::pop => format!("pop"),
-            Bytecode::pop2 => format!("pop2"),
-            Bytecode::dup => format!("dup"),
-            Bytecode::dup_x1 => format!("dup_x1"),
-            Bytecode::dup_x2 => format!("dup_x2"),
-            Bytecode::dup2 => format!("dup2"),
-            Bytecode::dup2_x1 => format!("dup2_x1"),
-            Bytecode::dup2_x2 => format!("dup2_x2"),
-            Bytecode::swap => format!("swap"),
-            Bytecode::iadd => format!("iadd"),
-            Bytecode::ladd => format!("ladd"),
-            Bytecode::fadd => format!("fadd"),
-            Bytecode::dadd => format!("dadd"),
-            Bytecode::isub => format!("isub"),
-            Bytecode::lsub => format!("lsub"),
-            Bytecode::fsub => format!("fsub"),
-            Bytecode::dsub => format!("dsub"),
-            Bytecode::imul => format!("imul"),
-            Bytecode::lmul => format!("lmul"),
-            Bytecode::fmul => format!("fmul"),
-            Bytecode::dmul => format!("dmul"),
-            Bytecode::idiv => format!("idiv"),
-            Bytecode::ldiv => format!("ldiv"),
-            Bytecode::fdiv => format!("fdiv"),
-            Bytecode::ddiv => format!("ddiv"),
-            Bytecode::irem => format!("irem"),
-            Bytecode::lrem => format!("lrem"),
-            Bytecode::frem => format!("frem"),
-            Bytecode::drem => format!("drem"),
-            Bytecode::ineg => format!("ineg"),
-            Bytecode::lneg => format!("lneg"),
-            Bytecode::fneg => format!("fneg"),
-            Bytecode::dneg => format!("dneg"),
-            Bytecode::ishl => format!("ishl"),
-            Bytecode::lshl => format!("lshl"),
-            Bytecode::ishr => format!("ishr"),
-            Bytecode::lshr => format!("lshr"),
-            Bytecode::iushr => format!("iushr"),
-            Bytecode::lushr => format!("lushr"),
-            Bytecode::iand => format!("iand"),
-            Bytecode::land => format!("land"),
-            Bytecode::ior => format!("ior"),
-            Bytecode::lor => format!("lor"),
-            Bytecode::ixor => format!("ixor"),
-            Bytecode::lxor => format!("lxor"),
-            Bytecode::iinc { .. } => format!("iinc"),
-            Bytecode::i2l => format!("i2l"),
-            Bytecode::i2f => format!("i2f"),
-            Bytecode::i2d => format!("i2d"),
-            Bytecode::l2i => format!("l2i"),
-            Bytecode::l2f => format!("l2f"),
-            Bytecode::l2d => format!("l2d"),
-            Bytecode::f2i => format!("f2i"),
-            Bytecode::f2l => format!("f2l"),
-            Bytecode::f2d => format!("f2d"),
-            Bytecode::d2i => format!("d2i"),
-            Bytecode::d2l => format!("d2l"),
-            Bytecode::d2f => format!("d2f"),
-            Bytecode::i2b => format!("i2b"),
-            Bytecode::i2c => format!("i2c"),
-            Bytecode::i2s => format!("i2s"),
-            Bytecode::lcmp => format!("lcmp"),
-            Bytecode::fcmpl => format!("fcmpl"),
-            Bytecode::fcmpg => format!("fcmpg"),
-            Bytecode::dcmpl => format!("dcmpl"),
-            Bytecode::dcmpg => format!("dcmpg"),
-            Bytecode::ifeq { .. } => format!("ifeq"),
-            Bytecode::ifne { .. } => format!("ifne"),
-            Bytecode::iflt { .. } => format!("iflt"),
-            Bytecode::ifge { .. } => format!("ifge"),
-            Bytecode::ifgt { .. } => format!("ifgt"),
-            Bytecode::ifle { .. } => format!("ifle"),
-            Bytecode::if_icmpeq { .. } => format!("if_icmpeq"),
-            Bytecode::if_icmpne { .. } => format!("if_icmpne"),
-            Bytecode::if_icmplt { .. } => format!("if_icmplt"),
-            Bytecode::if_icmpge { .. } => format!("if_icmpge"),
-            Bytecode::if_icmpgt { .. } => format!("if_icmpgt"),
-            Bytecode::if_icmple { .. } => format!("if_icmple"),
-            Bytecode::if_acmpeq { .. } => format!("if_acmpeq"),
-            Bytecode::if_acmpne { .. } => format!("if_acmpne"),
-            Bytecode::goto { .. } => format!("goto"),
-            Bytecode::jsr { .. } => format!("jsr"),
-            Bytecode::ret { .. } => format!("ret"),
-            Bytecode::tableswitch { .. } => format!("tableswitch"),
-            Bytecode::lookupswitch { .. } => format!("lookupswitch"),
-            Bytecode::ireturn => format!("ireturn"),
-            Bytecode::lreturn => format!("lreturn"),
-            Bytecode::freturn => format!("freturn"),
-            Bytecode::dreturn => format!("dreturn"),
-            Bytecode::areturn => format!("areturn"),
-            Bytecode::Return => format!("return"),
-            Bytecode::getstatic { .. } => format!("getstatic"),
-            Bytecode::putstatic { .. } => format!("putstatic"),
-            Bytecode::getfield { .. } => format!("getfield"),
-            Bytecode::putfield { .. } => format!("putfield"),
-            Bytecode::invokevirtual { .. } => format!("invokevirtual"),
-            Bytecode::invokespecial { index } => {
-                arg_string = format!("#{}", index); 
-                let entity = &match opts.constants[index] {
-                    Constant::Methodref(ref entity) => entity,
-                    Constant::InterfaceMethodref(ref entity) => entity,
-                    _ => {
-                        return Err(Error::new(ErrorKind::Other, "Invalid index value"));
-                    }
-                };
-                let descriptor = generate_typed_entity_comment_string(opts.constants, entity);
-                comment_string = format!("Method {}", descriptor);
-                format!("invokespecial")
+        let format = match *self {
+            Bytecode::nop => no_arg_bytecode!("nop"),
+            Bytecode::aconst_null => no_arg_bytecode!("aconst_null"),
+            Bytecode::iconst_i(i) if i < 0 => no_arg_bytecode!(iconst_m @ -i),
+            Bytecode::iconst_i(i) => no_arg_bytecode!(iconst_m @ i),
+            Bytecode::lconst_l(l) => no_arg_bytecode!(lconst_ @ l),
+            Bytecode::fconst_f(f) => no_arg_bytecode!(fconst_ @ f),
+            Bytecode::dconst_d(d) => no_arg_bytecode!(dconst_ @ d),
+            Bytecode::bipush { byte } => simple_arg("bipush", byte),
+            Bytecode::sipush { short } => simple_arg("sipush", short),
+            Bytecode::ldc { index } => constant_arg("ldc", index as u16, opts),
+            Bytecode::ldc_w { index } => constant_arg("ldc_w", index, opts),
+            Bytecode::ldc2_w { index  }=> constant_arg("ldc2_w", index, opts),
+            Bytecode::iload { index } => simple_arg("iload", index),
+            Bytecode::lload { index } => simple_arg("lload", index),
+            Bytecode::fload { index } => simple_arg("fload", index),
+            Bytecode::dload { byte } => simple_arg("dload", byte),
+            Bytecode::aload { index } => simple_arg("aload", index),
+            Bytecode::iload_n(n) => no_arg_bytecode!(iload_ @ n),
+            Bytecode::lload_n(n) => no_arg_bytecode!(lload_ @ n),
+            Bytecode::fload_n(n) => no_arg_bytecode!(fload_ @ n),
+            Bytecode::dload_n(n) => no_arg_bytecode!(dload_ @ n),
+            Bytecode::aload_n(n) => no_arg_bytecode!(aload_ @ n),
+            Bytecode::iaload => no_arg_bytecode!("iaload"),
+            Bytecode::laload => no_arg_bytecode!("laload"),
+            Bytecode::faload => no_arg_bytecode!("faload"),
+            Bytecode::daload => no_arg_bytecode!("daload"),
+            Bytecode::aaload => no_arg_bytecode!("aaload"),
+            Bytecode::baload => no_arg_bytecode!("baload"),
+            Bytecode::caload => no_arg_bytecode!("caload"),
+            Bytecode::saload => no_arg_bytecode!("sastore"),
+            Bytecode::istore { index } => simple_arg("istore", index),
+            Bytecode::lstore { index } => simple_arg("lstore", index),
+            Bytecode::fstore { index } => simple_arg("fstore", index),
+            Bytecode::dstore { index } => simple_arg("dstore", index),
+            Bytecode::astore { index } => simple_arg("astore", index),
+            Bytecode::istore_n(n) => no_arg_bytecode!(istore_ @ n),
+            Bytecode::lstore_n(n) => no_arg_bytecode!(lstore_ @ n),
+            Bytecode::fstore_n(n) => no_arg_bytecode!(fstore_ @ n),
+            Bytecode::dstore_n(n) => no_arg_bytecode!(dstore_ @ n),
+            Bytecode::astore_n(n) => no_arg_bytecode!(astore_ @ n),
+            Bytecode::iastore => no_arg_bytecode!("iastore"),
+            Bytecode::lastore => no_arg_bytecode!("lastore"),
+            Bytecode::fastore => no_arg_bytecode!("fastore"),
+            Bytecode::dastore => no_arg_bytecode!("dastore"),
+            Bytecode::aastore => no_arg_bytecode!("aastore"),
+            Bytecode::bastore => no_arg_bytecode!("bastore"),
+            Bytecode::castore => no_arg_bytecode!("castore"),
+            Bytecode::sastore => no_arg_bytecode!("sastore"),
+            Bytecode::pop => no_arg_bytecode!("pop"),
+            Bytecode::pop2 => no_arg_bytecode!("pop2"),
+            Bytecode::dup => no_arg_bytecode!("dup"),
+            Bytecode::dup_x1 => no_arg_bytecode!("dup_x1"),
+            Bytecode::dup_x2 => no_arg_bytecode!("dup_x2"),
+            Bytecode::dup2 => no_arg_bytecode!("dup2"),
+            Bytecode::dup2_x1 => no_arg_bytecode!("dup2_x1"),
+            Bytecode::dup2_x2 => no_arg_bytecode!("dup2_x2"),
+            Bytecode::swap => no_arg_bytecode!("swap"),
+            Bytecode::iadd => no_arg_bytecode!("iadd"),
+            Bytecode::ladd => no_arg_bytecode!("ladd"),
+            Bytecode::fadd => no_arg_bytecode!("fadd"),
+            Bytecode::dadd => no_arg_bytecode!("dadd"),
+            Bytecode::isub => no_arg_bytecode!("isub"),
+            Bytecode::lsub => no_arg_bytecode!("lsub"),
+            Bytecode::fsub => no_arg_bytecode!("fsub"),
+            Bytecode::dsub => no_arg_bytecode!("dsub"),
+            Bytecode::imul => no_arg_bytecode!("imul"),
+            Bytecode::lmul => no_arg_bytecode!("lmul"),
+            Bytecode::fmul => no_arg_bytecode!("fmul"),
+            Bytecode::dmul => no_arg_bytecode!("dmul"),
+            Bytecode::idiv => no_arg_bytecode!("idiv"),
+            Bytecode::ldiv => no_arg_bytecode!("ldiv"),
+            Bytecode::fdiv => no_arg_bytecode!("fdiv"),
+            Bytecode::ddiv => no_arg_bytecode!("ddiv"),
+            Bytecode::irem => no_arg_bytecode!("irem"),
+            Bytecode::lrem => no_arg_bytecode!("lrem"),
+            Bytecode::frem => no_arg_bytecode!("frem"),
+            Bytecode::drem => no_arg_bytecode!("drem"),
+            Bytecode::ineg => no_arg_bytecode!("ineg"),
+            Bytecode::lneg => no_arg_bytecode!("lneg"),
+            Bytecode::fneg => no_arg_bytecode!("fneg"),
+            Bytecode::dneg => no_arg_bytecode!("dneg"),
+            Bytecode::ishl => no_arg_bytecode!("ishl"),
+            Bytecode::lshl => no_arg_bytecode!("lshl"),
+            Bytecode::ishr => no_arg_bytecode!("ishr"),
+            Bytecode::lshr => no_arg_bytecode!("lshr"),
+            Bytecode::iushr => no_arg_bytecode!("iushr"),
+            Bytecode::lushr => no_arg_bytecode!("lushr"),
+            Bytecode::iand => no_arg_bytecode!("iand"),
+            Bytecode::land => no_arg_bytecode!("land"),
+            Bytecode::ior => no_arg_bytecode!("ior"),
+            Bytecode::lor => no_arg_bytecode!("lor"),
+            Bytecode::ixor => no_arg_bytecode!("ixor"),
+            Bytecode::lxor => no_arg_bytecode!("lxor"),
+            Bytecode::iinc { index, constant } => {
+                BytecodeFormat {
+                    op: format!("iinc"),
+                    arg: Some(format!("{}, {}", index, constant)),
+                    detail: None,
+                }
+            }
+            Bytecode::i2l => no_arg_bytecode!("i2l"),
+            Bytecode::i2f => no_arg_bytecode!("i2f"),
+            Bytecode::i2d => no_arg_bytecode!("i2d"),
+            Bytecode::l2i => no_arg_bytecode!("l2i"),
+            Bytecode::l2f => no_arg_bytecode!("l2f"),
+            Bytecode::l2d => no_arg_bytecode!("l2d"),
+            Bytecode::f2i => no_arg_bytecode!("f2i"),
+            Bytecode::f2l => no_arg_bytecode!("f2l"),
+            Bytecode::f2d => no_arg_bytecode!("f2d"),
+            Bytecode::d2i => no_arg_bytecode!("d2i"),
+            Bytecode::d2l => no_arg_bytecode!("d2l"),
+            Bytecode::d2f => no_arg_bytecode!("d2f"),
+            Bytecode::i2b => no_arg_bytecode!("i2b"),
+            Bytecode::i2c => no_arg_bytecode!("i2c"),
+            Bytecode::i2s => no_arg_bytecode!("i2s"),
+            Bytecode::lcmp => no_arg_bytecode!("lcmp"),
+            Bytecode::fcmpl => no_arg_bytecode!("fcmpl"),
+            Bytecode::fcmpg => no_arg_bytecode!("fcmpg"),
+            Bytecode::dcmpl => no_arg_bytecode!("dcmpl"),
+            Bytecode::dcmpg => no_arg_bytecode!("dcmpg"),
+            Bytecode::ifeq { branchoffset } => simple_arg("ifeq", branchoffset),
+            Bytecode::ifne { branchoffset } => simple_arg("ifne", branchoffset),
+            Bytecode::iflt { branchoffset } => simple_arg("iflt", branchoffset),
+            Bytecode::ifge { branchoffset } => simple_arg("ifge", branchoffset),
+            Bytecode::ifgt { branchoffset } => simple_arg("ifgt", branchoffset),
+            Bytecode::ifle { branchoffset } => simple_arg("ifle", branchoffset),
+            Bytecode::if_icmpeq { branchoffset } => simple_arg("if_icmpeq", branchoffset),
+            Bytecode::if_icmpne { branchoffset } => simple_arg("if_icmpne", branchoffset),
+            Bytecode::if_icmplt { branchoffset } => simple_arg("if_icmplt", branchoffset),
+            Bytecode::if_icmpge { branchoffset } => simple_arg("if_icmpge", branchoffset),
+            Bytecode::if_icmpgt { branchoffset } => simple_arg("if_icmpgt", branchoffset),
+            Bytecode::if_icmple { branchoffset } => simple_arg("if_icmple", branchoffset),
+            Bytecode::if_acmpeq { branchoffset } => simple_arg("if_acmpeq", branchoffset),
+            Bytecode::if_acmpne { branchoffset } => simple_arg("if_acmpne", branchoffset),
+            Bytecode::goto { branchoffset } => simple_arg("goto", branchoffset),
+            Bytecode::jsr { branchoffset } => simple_arg("jsr", branchoffset),
+            Bytecode::ret { index } => simple_arg("ret", index),
+            Bytecode::tableswitch { .. } => no_arg_bytecode!("tableswitch"),
+            Bytecode::lookupswitch { .. } => no_arg_bytecode!("lookupswitch"),
+            Bytecode::ireturn => no_arg_bytecode!("ireturn"),
+            Bytecode::lreturn => no_arg_bytecode!("lreturn"),
+            Bytecode::freturn => no_arg_bytecode!("freturn"),
+            Bytecode::dreturn => no_arg_bytecode!("dreturn"),
+            Bytecode::areturn => no_arg_bytecode!("areturn"),
+            Bytecode::Return => no_arg_bytecode!("return"),
+            Bytecode::getstatic { index } => constant_arg("getstatic", index, opts),
+            Bytecode::putstatic { index } => constant_arg("putstatic", index, opts),
+            Bytecode::getfield { index } => constant_arg("getfield", index, opts),
+            Bytecode::putfield { index } => constant_arg("putfield", index, opts),
+            Bytecode::invokevirtual { index } => constant_arg("invokevirtual", index, opts),
+            Bytecode::invokespecial { index } => constant_arg("invokespecial", index, opts),
+            Bytecode::invokestatic { index } => constant_arg("invokestatic", index, opts),
+            Bytecode::invokeinterface { index, count } => {
+                BytecodeFormat {
+                    op: "invokeinterface".into(),
+                    arg: Some(format!("#{}, {}", index, count)),
+                    detail: constant_arg_detail(index, opts),
+                }
             },
-            Bytecode::invokestatic { .. } => format!("invokestatic"),
-            Bytecode::invokeinterface { .. } => format!("invokeinterface"),
-            Bytecode::invokedynamic { .. } => format!("invokedynamic"),
-            Bytecode::new { .. } => format!("new"),
-            Bytecode::newarray { .. } => format!("newarray"),
-            Bytecode::anewarray { .. } => format!("anewarray"),
-            Bytecode::arraylength => format!("arraylength"),
-            Bytecode::athrow => format!("athrow"),
-            Bytecode::checkcast { .. } => format!("checkcast"),
-            Bytecode::instanceof { .. } => format!("instanceof"),
-            Bytecode::monitorenter => format!("monitorenter"),
-            Bytecode::monitorexit => format!("monitorexit"),
-            Bytecode::wide_iload { .. } => format!("wide_iload"),
-            Bytecode::wide_lload { .. } => format!("wide_lload"),
-            Bytecode::wide_fload { .. } => format!("wide_fload"),
-            Bytecode::wide_dload { .. } => format!("wide_dload"),
-            Bytecode::wide_aload { .. } => format!("wide_aload"),
-            Bytecode::wide_istore { .. } => format!("wide_istore"),
-            Bytecode::wide_lstore { .. } => format!("wide_lstore"),
-            Bytecode::wide_fstore { .. } => format!("wide_fstore"),
-            Bytecode::wide_dstore { .. } => format!("wide_dstore"),
-            Bytecode::wide_astore { .. } => format!("wide_astore"),
-            Bytecode::wide_iinc { .. } => format!("wide_iinc"),
-            Bytecode::wide_ret { .. } => format!("wide_ret"),
-            Bytecode::multianewarray { .. } => format!("multianewarray"),
-            Bytecode::ifnull { .. } => format!("ifnull"),
-            Bytecode::ifnonnull { .. } => format!("ifnonnull"),
-            Bytecode::goto_w { .. } => format!("goto_w"),
-            Bytecode::jsr_w { .. } => format!("jsr_w"),
-            Bytecode::invalid(op) => format!("invalid {}", op),
+            Bytecode::invokedynamic { index } => {
+                BytecodeFormat {
+                    op: "invokedynamic".into(),
+                    arg: Some(format!("#{},  {}", index, 0)),
+                    detail: constant_arg_detail(index, opts),
+                }
+            },
+            Bytecode::new { index } => constant_arg("new", index, opts),
+            Bytecode::newarray { atype } => simple_arg("newarray", atype),
+            Bytecode::anewarray { index } => constant_arg("anewarray", index, opts),
+            Bytecode::arraylength => no_arg_bytecode!("arraylength"),
+            Bytecode::athrow => no_arg_bytecode!("athrow"),
+            Bytecode::checkcast { index } => constant_arg("checkcast", index, opts),
+            Bytecode::instanceof { index } => constant_arg("instanceof", index, opts),
+            Bytecode::monitorenter => no_arg_bytecode!("monitorenter"),
+            Bytecode::monitorexit => no_arg_bytecode!("monitorexit"),
+            Bytecode::wide_iload { index } => simple_arg("wide_iload", index),
+            Bytecode::wide_lload { index } => simple_arg("wide_lload", index),
+            Bytecode::wide_fload { index } => simple_arg("wide_fload", index),
+            Bytecode::wide_dload { index } => simple_arg("wide_dload", index),
+            Bytecode::wide_aload { index } => simple_arg("wide_aload", index),
+            Bytecode::wide_istore { index } => simple_arg("wide_istore", index),
+            Bytecode::wide_lstore { index } => simple_arg("wide_lstore", index),
+            Bytecode::wide_fstore { index } => simple_arg("wide_fstore", index),
+            Bytecode::wide_dstore { index } => simple_arg("wide_dstore", index),
+            Bytecode::wide_astore { index } => simple_arg("wide_astore", index),
+            Bytecode::wide_iinc { .. } => no_arg_bytecode!("wide_iinc"),
+            Bytecode::wide_ret { .. } => no_arg_bytecode!("wide_ret"),
+            Bytecode::multianewarray { .. } => no_arg_bytecode!("multianewarray"),
+            Bytecode::ifnull { .. } => no_arg_bytecode!("ifnull"),
+            Bytecode::ifnonnull { .. } => no_arg_bytecode!("ifnonnull"),
+            Bytecode::goto_w { .. } => no_arg_bytecode!("goto_w"),
+            Bytecode::jsr_w { .. } => no_arg_bytecode!("jsr_w"),
+            Bytecode::invalid(op) => no_arg_bytecode!(invalid_ @ op),
         };
-        try!(write!(fmt.out, "{:<14}{:<20}// {}", op_string, arg_string, comment_string));
+        let arg_string = format.arg.unwrap_or(String::new());
+        let comment_string = format.detail.map_or(String::new(), |s| format!("// {}", s));
+        try!(write!(fmt.out, "{:<14}{:<20}{}", format.op, arg_string, comment_string));
         Ok(())
     }
 }

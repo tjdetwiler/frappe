@@ -1,5 +1,5 @@
 #[allow(non_camel_case_types)]
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Bytecode {
     aaload,
     aastore,
@@ -188,7 +188,9 @@ pub enum Bytecode {
     ireturn,
     ishl,
     ishr,
-    istore,
+    istore {
+        index: u8
+    },
     /// 0 <= n <= 3
     istore_n(u8),
     isub,
@@ -237,7 +239,9 @@ pub enum Bytecode {
     lreturn,
     lshl,
     lshr,
-    lstore,
+    lstore {
+        index: u8
+    },
     /// 0 <= n <= 3
     lstore_n(u8),
     lsub,
@@ -323,82 +327,89 @@ pub enum Bytecode {
 }
 
 macro_rules! fetch {
-    (u32 $code:expr, $base:expr) => {{
-        let byte1: u32 = $code[$base] as u32;
-        let byte2: u32 = $code[$base + 1] as u32;
-        let byte3: u32 = $code[$base + 2] as u32;
-        let byte4: u32 = $code[$base + 3] as u32;
-        $base = $base + 4;
+    (u32 $code:expr, $pc:expr) => {{
+        let byte1: u32 = $code[$pc] as u32;
+        let byte2: u32 = $code[$pc + 1] as u32;
+        let byte3: u32 = $code[$pc + 2] as u32;
+        let byte4: u32 = $code[$pc + 3] as u32;
+        $pc = $pc + 4;
         (byte1 << 24 | byte2 << 16 | byte3 << 8 | byte4)
     }};
-    (i32 $code:expr, $base:expr) => {{
-        fetch!(u32 $code, $base) as i32
+    (i32 $code:expr, $pc:expr) => {{
+        fetch!(u32 $code, $pc) as i32
     }};
-    (u16 $code:expr, $base:expr) => {{
-        let byte1: u16 = $code[$base] as u16;
-        let byte2: u16 = $code[$base + 1] as u16;
-        $base = $base + 2;
+    (u16 $code:expr, $pc:expr) => {{
+        let byte1: u16 = $code[$pc] as u16;
+        let byte2: u16 = $code[$pc + 1] as u16;
+        $pc = $pc + 2;
         (byte1 << 8 | byte2)
     }};
-    (i16 $code:expr, $base:expr) => {{
-        fetch!(u16 $code, $base) as i16
+    (i16 $code:expr, $pc:expr) => {{
+        fetch!(u16 $code, $pc) as i16
     }};
-    (u8 $code:expr, $base:expr) => {{
-        let byte: u8 = $code[$base] as u8;
-        $base = $base + 1;
+    (u8 $code:expr, $pc:expr) => {{
+        let byte: u8 = $code[$pc] as u8;
+        $pc = $pc + 1;
         byte
     }};
 }
 
+/// Computes the number of pad bytes to align a given index to an alignment.
+#[macro_export]
+macro_rules! pad_align {
+    ($value:expr, 4) => {
+        (4 - ($value & 3)) & 3
+    };
+    ($value:expr, $alignment:expr) => {
+        ($alignment - ($value % $alignment)) % $alignment
+    };
+}
+
 macro_rules! bytecode {
-    ($name:ident) => {
+    ($name:ident, $pc:expr) => {
         DecodeResult {
             bytecode: Bytecode::$name,
-            consumed: 1,
+            newpc: $pc,
         }
     };
-    ($name:ident, $val:expr) => {
+    ($name:ident, $val:expr, $pc:expr) => {
         DecodeResult {
             bytecode: Bytecode::$name($val),
-            consumed: 1,
+            newpc: $pc,
         }
     };
-    ($code:expr, $name:ident, $field:ident : u8) => {
+    ($code:expr, $pc:expr, $name:ident, $field:ident : u8) => {
         DecodeResult {
-            bytecode: Bytecode::$name { $field: $code[1] },
-            consumed: 2,
+            bytecode: Bytecode::$name { $field: $code[$pc] },
+            newpc: $pc + 1,
         }
     };
-    ($code:expr, $name:ident, $field:ident : i16) => {{
-        let mut consumed: usize = 1;
-        let value = fetch!(i16 $code, consumed);
+    ($code:expr, $pc:expr, $name:ident, $field:ident : i16) => {{
+        let value = fetch!(i16 $code, $pc);
         DecodeResult {
             bytecode: Bytecode::$name { $field: value },
-            consumed: consumed,
+            newpc: $pc,
         }
     }};
-    ($code:expr, $name:ident, $field:ident : u16) => {{
-        let mut consumed: usize = 1;
-        let value = fetch!(u16 $code, consumed);
+    ($code:expr, $pc:expr, $name:ident, $field:ident : u16) => {{
+        let value = fetch!(u16 $code, $pc);
         DecodeResult {
             bytecode: Bytecode::$name { $field: value },
-            consumed: consumed,
+            newpc: $pc,
         }
     }};
-    ($code:expr, $name:ident, $field:ident : i16) => {{
-        let mut consumed: usize = 1;
-        let value = fetch!(i16 $code, consumed);
+    ($code:expr, $pc:expr, $name:ident, $field:ident : i16) => {{
+        let value = fetch!(i16 $code, $pc);
         DecodeResult {
             bytecode: Bytecode::$name { $field: value },
-            consumed: consumed,
+            newpc: $pc,
         }
     }};
-    ($code:expr, $name:ident, $field:ident : u32) => {{
-        let mut consumed: usize = 1;
-        let value = fetch!(u32 $code, consumed);
+    ($code:expr, $pc:expr, $name:ident, $field:ident : u32) => {{
+        let value = fetch!(u32 $code, $pc);
         DecodeResult {
             bytecode: Bytecode::$name { $field: value },
-            consumed: consumed,
+            newpc: $pc,
         }
     }};
 }
@@ -406,7 +417,7 @@ macro_rules! bytecode {
 #[derive(Debug)]
 pub struct DecodeResult {
     pub bytecode: Bytecode,
-    pub consumed: usize,
+    pub newpc: usize,
 }
 
 impl Bytecode {
@@ -414,155 +425,167 @@ impl Bytecode {
     ///
     /// Returns the decoded bytecode and how many bytes from the instruction
     /// stream were consumed by this decoded instruction.
-    pub fn decode(code: &[u8], pc: usize) -> DecodeResult {
-        match code[0] {
-            0x00 => bytecode!(nop),
-            0x01 => bytecode!(aconst_null),
-            i @ 0x02...0x08 => bytecode!(iconst_i, i as i8 - 0x03),
-            l @ 0x09...0x0a => bytecode!(lconst_l, l as u8 - 0x09),
-            f @ 0x0b...0x0d => bytecode!(fconst_f, f as u8 - 0x0b),
-            d @ 0x0e...0x0f => bytecode!(dconst_d, d as u8 - 0x0e),
-            0x10 => bytecode!(code, bipush, byte: u8),
-            0x11 => bytecode!(code, sipush, short: i16),
-            0x12 => bytecode!(code, ldc, index: u8),
-            0x13 => bytecode!(code, ldc_w, index: u16),
-            0x14 => bytecode!(code, ldc2_w, index: u16),
-            0x15 => bytecode!(code, iload, index: u8),
-            0x16 => bytecode!(code, lload, index: u8),
-            0x17 => bytecode!(code, fload, index: u8),
-            0x18 => bytecode!(code, dload, byte: u8),
-            0x19 => bytecode!(code, aload, index: u8),
-            n @ 0x1a...0x1d => bytecode!(iload_n, n as u8 - 0x1a),
-            n @ 0x1e...0x21 => bytecode!(lload_n, n as u8 - 0x1e),
-            n @ 0x22...0x25 => bytecode!(fload_n, n as u8 - 0x22),
-            n @ 0x26...0x29 => bytecode!(dload_n, n as u8 - 0x26),
-            n @ 0x2a...0x2d => bytecode!(aload_n, n as u8 - 0x2a),
-            0x2e => bytecode!(iaload),
-            0x2f => bytecode!(laload),
-            0x30 => bytecode!(faload),
-            0x31 => bytecode!(daload),
-            0x32 => bytecode!(aaload),
-            0x33 => bytecode!(baload),
-            0x34 => bytecode!(caload),
-            0x35 => bytecode!(saload),
-            0x36 => bytecode!(istore),
-            0x37 => bytecode!(lstore),
-            0x38 => bytecode!(code, fstore, index: u8),
-            0x39 => bytecode!(code, dstore, index: u8),
-            0x3a => bytecode!(code, astore, index: u8),
-            n @ 0x3b...0x3e => bytecode!(istore_n, n as u8 - 0x3b),
-            n @ 0x3f...0x42 => bytecode!(lstore_n, n as u8 - 0x3f),
-            n @ 0x43...0x46 => bytecode!(fstore_n, n as u8 - 0x43),
-            n @ 0x47...0x4a => bytecode!(dstore_n, n as u8 - 0x47),
-            n @ 0x4b...0x4e => bytecode!(astore_n, n as u8 - 0x4b),
-            0x4f => bytecode!(iastore),
-            0x50 => bytecode!(lastore),
-            0x51 => bytecode!(fastore),
-            0x52 => bytecode!(dastore),
-            0x53 => bytecode!(aastore),
-            0x54 => bytecode!(bastore),
-            0x55 => bytecode!(castore),
-            0x56 => bytecode!(sastore),
-            0x57 => bytecode!(pop),
-            0x58 => bytecode!(pop2),
-            0x59 => bytecode!(dup),
-            0x5a => bytecode!(dup_x1),
-            0x5b => bytecode!(dup_x2),
-            0x5c => bytecode!(dup2),
-            0x5d => bytecode!(dup2_x1),
-            0x5e => bytecode!(dup2_x2),
-            0x5f => bytecode!(swap),
-            0x60 => bytecode!(iadd),
-            0x61 => bytecode!(ladd),
-            0x62 => bytecode!(fadd),
-            0x63 => bytecode!(dadd),
-            0x64 => bytecode!(isub),
-            0x65 => bytecode!(lsub),
-            0x66 => bytecode!(fsub),
-            0x67 => bytecode!(dsub),
-            0x68 => bytecode!(imul),
-            0x69 => bytecode!(lmul),
-            0x6a => bytecode!(fmul),
-            0x6b => bytecode!(dmul),
-            0x6c => bytecode!(idiv),
-            0x6d => bytecode!(ldiv),
-            0x6e => bytecode!(fdiv),
-            0x6f => bytecode!(ddiv),
-            0x70 => bytecode!(irem),
-            0x71 => bytecode!(lrem),
-            0x72 => bytecode!(frem),
-            0x73 => bytecode!(drem),
-            0x74 => bytecode!(ineg),
-            0x75 => bytecode!(lneg),
-            0x76 => bytecode!(fneg),
-            0x77 => bytecode!(dneg),
-            0x78 => bytecode!(ishl),
-            0x79 => bytecode!(lshl),
-            0x7a => bytecode!(ishr),
-            0x7b => bytecode!(lshr),
-            0x7c => bytecode!(iushr),
-            0x7d => bytecode!(lushr),
-            0x7e => bytecode!(iand),
-            0x7f => bytecode!(land),
-            0x80 => bytecode!(ior),
-            0x81 => bytecode!(lor),
-            0x82 => bytecode!(ixor),
-            0x83 => bytecode!(lxor),
+    ///
+    /// # Examples
+    /// ```rust
+    /// let mut pc = 0;
+    /// let code: Vec<u8> = vec![];
+    /// while pc < code.len() {
+    /// }
+    /// ```
+    pub fn decode(code: &[u8], mut pc: usize) -> DecodeResult {
+        let opcode = code[pc];
+        pc = pc + 1;
+        match opcode {
+            0x00 => bytecode!(nop, pc),
+            0x01 => bytecode!(aconst_null, pc),
+            i @ 0x02...0x08 => bytecode!(iconst_i, i as i8 - 0x03, pc),
+            l @ 0x09...0x0a => bytecode!(lconst_l, l as u8 - 0x09, pc),
+            f @ 0x0b...0x0d => bytecode!(fconst_f, f as u8 - 0x0b, pc),
+            d @ 0x0e...0x0f => bytecode!(dconst_d, d as u8 - 0x0e, pc),
+            0x10 => bytecode!(code, pc, bipush, byte: u8),
+            0x11 => bytecode!(code, pc, sipush, short: i16),
+            0x12 => bytecode!(code, pc, ldc, index: u8),
+            0x13 => bytecode!(code, pc, ldc_w, index: u16),
+            0x14 => bytecode!(code, pc, ldc2_w, index: u16),
+            0x15 => bytecode!(code, pc, iload, index: u8),
+            0x16 => bytecode!(code, pc, lload, index: u8),
+            0x17 => bytecode!(code, pc, fload, index: u8),
+            0x18 => bytecode!(code, pc, dload, byte: u8),
+            0x19 => bytecode!(code, pc, aload, index: u8),
+            n @ 0x1a...0x1d => bytecode!(iload_n, n as u8 - 0x1a, pc),
+            n @ 0x1e...0x21 => bytecode!(lload_n, n as u8 - 0x1e, pc),
+            n @ 0x22...0x25 => bytecode!(fload_n, n as u8 - 0x22, pc),
+            n @ 0x26...0x29 => bytecode!(dload_n, n as u8 - 0x26, pc),
+            n @ 0x2a...0x2d => bytecode!(aload_n, n as u8 - 0x2a, pc),
+            0x2e => bytecode!(iaload, pc),
+            0x2f => bytecode!(laload, pc),
+            0x30 => bytecode!(faload, pc),
+            0x31 => bytecode!(daload, pc),
+            0x32 => bytecode!(aaload, pc),
+            0x33 => bytecode!(baload, pc),
+            0x34 => bytecode!(caload, pc),
+            0x35 => bytecode!(saload, pc),
+            0x36 => bytecode!(code, pc, istore, index: u8),
+            0x37 => bytecode!(code, pc, lstore, index: u8),
+            0x38 => bytecode!(code, pc, fstore, index: u8),
+            0x39 => bytecode!(code, pc, dstore, index: u8),
+            0x3a => bytecode!(code, pc, astore, index: u8),
+            n @ 0x3b...0x3e => bytecode!(istore_n, n as u8 - 0x3b, pc),
+            n @ 0x3f...0x42 => bytecode!(lstore_n, n as u8 - 0x3f, pc),
+            n @ 0x43...0x46 => bytecode!(fstore_n, n as u8 - 0x43, pc),
+            n @ 0x47...0x4a => bytecode!(dstore_n, n as u8 - 0x47, pc),
+            n @ 0x4b...0x4e => bytecode!(astore_n, n as u8 - 0x4b, pc),
+            0x4f => bytecode!(iastore, pc),
+            0x50 => bytecode!(lastore, pc),
+            0x51 => bytecode!(fastore, pc),
+            0x52 => bytecode!(dastore, pc),
+            0x53 => bytecode!(aastore, pc),
+            0x54 => bytecode!(bastore, pc),
+            0x55 => bytecode!(castore, pc),
+            0x56 => bytecode!(sastore, pc),
+            0x57 => bytecode!(pop, pc),
+            0x58 => bytecode!(pop2, pc),
+            0x59 => bytecode!(dup, pc),
+            0x5a => bytecode!(dup_x1, pc),
+            0x5b => bytecode!(dup_x2, pc),
+            0x5c => bytecode!(dup2, pc),
+            0x5d => bytecode!(dup2_x1, pc),
+            0x5e => bytecode!(dup2_x2, pc),
+            0x5f => bytecode!(swap, pc),
+            0x60 => bytecode!(iadd, pc),
+            0x61 => bytecode!(ladd, pc),
+            0x62 => bytecode!(fadd, pc),
+            0x63 => bytecode!(dadd, pc),
+            0x64 => bytecode!(isub, pc),
+            0x65 => bytecode!(lsub, pc),
+            0x66 => bytecode!(fsub, pc),
+            0x67 => bytecode!(dsub, pc),
+            0x68 => bytecode!(imul, pc),
+            0x69 => bytecode!(lmul, pc),
+            0x6a => bytecode!(fmul, pc),
+            0x6b => bytecode!(dmul, pc),
+            0x6c => bytecode!(idiv, pc),
+            0x6d => bytecode!(ldiv, pc),
+            0x6e => bytecode!(fdiv, pc),
+            0x6f => bytecode!(ddiv, pc),
+            0x70 => bytecode!(irem, pc),
+            0x71 => bytecode!(lrem, pc),
+            0x72 => bytecode!(frem, pc),
+            0x73 => bytecode!(drem, pc),
+            0x74 => bytecode!(ineg, pc),
+            0x75 => bytecode!(lneg, pc),
+            0x76 => bytecode!(fneg, pc),
+            0x77 => bytecode!(dneg, pc),
+            0x78 => bytecode!(ishl, pc),
+            0x79 => bytecode!(lshl, pc),
+            0x7a => bytecode!(ishr, pc),
+            0x7b => bytecode!(lshr, pc),
+            0x7c => bytecode!(iushr, pc),
+            0x7d => bytecode!(lushr, pc),
+            0x7e => bytecode!(iand, pc),
+            0x7f => bytecode!(land, pc),
+            0x80 => bytecode!(ior, pc),
+            0x81 => bytecode!(lor, pc),
+            0x82 => bytecode!(ixor, pc),
+            0x83 => bytecode!(lxor, pc),
             0x84 => {
+                let index = fetch!(u8 code, pc);
+                let constant = fetch!(u8 code, pc);
                 DecodeResult {
                     bytecode: Bytecode::iinc {
-                        index: code[1],
-                        constant: code[2],
+                        index: index,
+                        constant: constant,
                     },
-                    consumed: 3,
+                    newpc: pc,
                 }
             }
-            0x85 => bytecode!(i2l),
-            0x86 => bytecode!(i2f),
-            0x87 => bytecode!(i2d),
-            0x88 => bytecode!(l2i),
-            0x89 => bytecode!(l2f),
-            0x8a => bytecode!(l2d),
-            0x8b => bytecode!(f2i),
-            0x8c => bytecode!(f2l),
-            0x8d => bytecode!(f2d),
-            0x8e => bytecode!(d2i),
-            0x8f => bytecode!(d2l),
-            0x90 => bytecode!(d2f),
-            0x91 => bytecode!(i2b),
-            0x92 => bytecode!(i2c),
-            0x93 => bytecode!(i2s),
-            0x94 => bytecode!(lcmp),
-            0x95 => bytecode!(fcmpl),
-            0x96 => bytecode!(fcmpg),
-            0x97 => bytecode!(dcmpl),
-            0x98 => bytecode!(dcmpg),
-            0x99 => bytecode!(code, ifeq, branchoffset: u16),
-            0x9a => bytecode!(code, ifne, branchoffset: u16),
-            0x9b => bytecode!(code, iflt, branchoffset: u16),
-            0x9c => bytecode!(code, ifge, branchoffset: u16),
-            0x9d => bytecode!(code, ifgt, branchoffset: u16),
-            0x9e => bytecode!(code, ifle, branchoffset: u16),
-            0x9f => bytecode!(code, if_icmpeq, branchoffset: u16),
-            0xa0 => bytecode!(code, if_icmpne, branchoffset: u16),
-            0xa1 => bytecode!(code, if_icmplt, branchoffset: u16),
-            0xa2 => bytecode!(code, if_icmpge, branchoffset: u16),
-            0xa3 => bytecode!(code, if_icmpgt, branchoffset: u16),
-            0xa4 => bytecode!(code, if_icmple, branchoffset: u16),
-            0xa5 => bytecode!(code, if_acmpeq, branchoffset: u16),
-            0xa6 => bytecode!(code, if_acmpne, branchoffset: u16),
-            0xa7 => bytecode!(code, goto, branchoffset: u16),
-            0xa8 => bytecode!(code, jsr, branchoffset: u16),
-            0xa9 => bytecode!(code, ret, index: u8),
+            0x85 => bytecode!(i2l, pc),
+            0x86 => bytecode!(i2f, pc),
+            0x87 => bytecode!(i2d, pc),
+            0x88 => bytecode!(l2i, pc),
+            0x89 => bytecode!(l2f, pc),
+            0x8a => bytecode!(l2d, pc),
+            0x8b => bytecode!(f2i, pc),
+            0x8c => bytecode!(f2l, pc),
+            0x8d => bytecode!(f2d, pc),
+            0x8e => bytecode!(d2i, pc),
+            0x8f => bytecode!(d2l, pc),
+            0x90 => bytecode!(d2f, pc),
+            0x91 => bytecode!(i2b, pc),
+            0x92 => bytecode!(i2c, pc),
+            0x93 => bytecode!(i2s, pc),
+            0x94 => bytecode!(lcmp, pc),
+            0x95 => bytecode!(fcmpl, pc),
+            0x96 => bytecode!(fcmpg, pc),
+            0x97 => bytecode!(dcmpl, pc),
+            0x98 => bytecode!(dcmpg, pc),
+            0x99 => bytecode!(code, pc, ifeq, branchoffset: u16),
+            0x9a => bytecode!(code, pc, ifne, branchoffset: u16),
+            0x9b => bytecode!(code, pc, iflt, branchoffset: u16),
+            0x9c => bytecode!(code, pc, ifge, branchoffset: u16),
+            0x9d => bytecode!(code, pc, ifgt, branchoffset: u16),
+            0x9e => bytecode!(code, pc, ifle, branchoffset: u16),
+            0x9f => bytecode!(code, pc, if_icmpeq, branchoffset: u16),
+            0xa0 => bytecode!(code, pc, if_icmpne, branchoffset: u16),
+            0xa1 => bytecode!(code, pc, if_icmplt, branchoffset: u16),
+            0xa2 => bytecode!(code, pc, if_icmpge, branchoffset: u16),
+            0xa3 => bytecode!(code, pc, if_icmpgt, branchoffset: u16),
+            0xa4 => bytecode!(code, pc, if_icmple, branchoffset: u16),
+            0xa5 => bytecode!(code, pc, if_acmpeq, branchoffset: u16),
+            0xa6 => bytecode!(code, pc, if_acmpne, branchoffset: u16),
+            0xa7 => bytecode!(code, pc, goto, branchoffset: u16),
+            0xa8 => bytecode!(code, pc, jsr, branchoffset: u16),
+            0xa9 => bytecode!(code, pc, ret, index: u8),
             0xaa => {
-                let mut index: usize = 4 - (pc % 4) as usize;
-                let default = fetch!(i32 code, index);
-                let low = fetch!(i32 code, index);
-                let high = fetch!(i32 code, index);
+                pc += pad_align!(pc, 4);
+                let default = fetch!(i32 code, pc);
+                let low = fetch!(i32 code, pc);
+                let high = fetch!(i32 code, pc);
                 let mut offsets: Vec<i32> = vec![];
                 let offset_count = high - low + 1;
                 for _ in 0..offset_count {
-                    let offset = fetch!(i32 code, index);
+                    let offset = fetch!(i32 code, pc);
                     offsets.push(offset);
                 }
                 DecodeResult {
@@ -572,17 +595,17 @@ impl Bytecode {
                         high: high,
                         offsets: offsets,
                     },
-                    consumed: index,
+                    newpc: pc,
                 }
             }
             0xab => {
-                let mut index: usize = 4 - (pc % 4) as usize;
-                let default = fetch!(i32 code, index);
-                let npairs = fetch!(i32 code, index);
+                pc += pad_align!(pc, 4);
+                let default = fetch!(i32 code, pc);
+                let npairs = fetch!(i32 code, pc);
                 let mut pairs: Vec<(i32, i32)> = vec![];
                 for _ in 0..npairs {
-                    let first = fetch!(i32 code, index);
-                    let second = fetch!(i32 code, index);
+                    let first = fetch!(i32 code, pc);
+                    let second = fetch!(i32 code, pc);
                     pairs.push((first, second));
                 }
                 DecodeResult {
@@ -591,104 +614,391 @@ impl Bytecode {
                         npairs: npairs,
                         pairs: pairs,
                     },
-                    consumed: index,
+                    newpc: pc,
                 }
             }
-            0xac => bytecode!(ireturn),
-            0xad => bytecode!(lreturn),
-            0xae => bytecode!(freturn),
-            0xaf => bytecode!(dreturn),
-            0xb0 => bytecode!(areturn),
-            0xb1 => bytecode!(Return),
-            0xb2 => bytecode!(code, getstatic, index: u16),
-            0xb3 => bytecode!(code, putstatic, index: u16),
-            0xb4 => bytecode!(code, getfield, index: u16),
-            0xb5 => bytecode!(code, putfield, index: u16),
-            0xb6 => bytecode!(code, invokevirtual, index: u16),
-            0xb7 => bytecode!(code, invokespecial, index: u16),
-            0xb8 => bytecode!(code, invokestatic, index: u16),
+            0xac => bytecode!(ireturn, pc),
+            0xad => bytecode!(lreturn, pc),
+            0xae => bytecode!(freturn, pc),
+            0xaf => bytecode!(dreturn, pc),
+            0xb0 => bytecode!(areturn, pc),
+            0xb1 => bytecode!(Return, pc),
+            0xb2 => bytecode!(code, pc, getstatic, index: u16),
+            0xb3 => bytecode!(code, pc, putstatic, index: u16),
+            0xb4 => bytecode!(code, pc, getfield, index: u16),
+            0xb5 => bytecode!(code, pc, putfield, index: u16),
+            0xb6 => bytecode!(code, pc, invokevirtual, index: u16),
+            0xb7 => bytecode!(code, pc, invokespecial, index: u16),
+            0xb8 => bytecode!(code, pc, invokestatic, index: u16),
             0xb9 => {
-                let mut offset: usize = 0;
-                let index = fetch!(u16 code, offset);
-                let count = fetch!(u8 code, offset);
-                let _ignore = fetch!(u8 code, offset);
+                let index = fetch!(u16 code, pc);
+                let count = fetch!(u8 code, pc);
+                let _ignore = fetch!(u8 code, pc);
                 DecodeResult {
                     bytecode: Bytecode::invokeinterface {
                         index: index,
                         count: count,
                     },
-                    consumed: offset,
+                    newpc: pc,
                 }
             }
             0xba => {
-                let mut offset: usize = 0;
-                let index = fetch!(u16 code, offset);
-                let _ignore = fetch!(u8 code, offset);
-                let _ignore = fetch!(u8 code, offset);
+                let index = fetch!(u16 code, pc);
+                let _ignore = fetch!(u8 code, pc);
+                let _ignore = fetch!(u8 code, pc);
                 DecodeResult {
                     bytecode: Bytecode::invokedynamic { index: index },
-                    consumed: offset,
+                    newpc: pc,
                 }
             }
-            0xbb => bytecode!(code, new, index: u16),
-            0xbc => bytecode!(code, newarray, atype: u8),
-            0xbd => bytecode!(code, anewarray, index: u16),
-            0xbe => bytecode!(arraylength),
-            0xbf => bytecode!(athrow),
-            0xc0 => bytecode!(code, checkcast, index: u16),
-            0xc1 => bytecode!(code, instanceof, index: u16),
-            0xc2 => bytecode!(monitorenter),
-            0xc3 => bytecode!(monitorexit),
+            0xbb => bytecode!(code, pc, new, index: u16),
+            0xbc => bytecode!(code, pc, newarray, atype: u8),
+            0xbd => bytecode!(code, pc, anewarray, index: u16),
+            0xbe => bytecode!(arraylength, pc),
+            0xbf => bytecode!(athrow, pc),
+            0xc0 => bytecode!(code, pc, checkcast, index: u16),
+            0xc1 => bytecode!(code, pc, instanceof, index: u16),
+            0xc2 => bytecode!(monitorenter, pc),
+            0xc3 => bytecode!(monitorexit, pc),
             0xc4 => {
-                let mut _offset: usize = 0;
-                let opcode = fetch!(u8 code, _offset);
-                let mut result = match opcode {
-                    0x15 => bytecode!(code, wide_iload, index: u16),
-                    0x16 => bytecode!(code, wide_lload, index: u16),
-                    0x17 => bytecode!(code, wide_fload, index: u16),
-                    0x18 => bytecode!(code, wide_dload, index: u16),
-                    0x19 => bytecode!(code, wide_aload, index: u16),
-                    0x36 => bytecode!(code, wide_istore, index: u16),
-                    0x37 => bytecode!(code, wide_lstore, index: u16),
-                    0x38 => bytecode!(code, wide_fstore, index: u16),
-                    0x39 => bytecode!(code, wide_dstore, index: u16),
-                    0x3a => bytecode!(code, wide_astore, index: u16),
+                let opcode = fetch!(u8 code, pc);
+                match opcode {
+                    0x15 => bytecode!(code, pc, wide_iload, index: u16),
+                    0x16 => bytecode!(code, pc, wide_lload, index: u16),
+                    0x17 => bytecode!(code, pc, wide_fload, index: u16),
+                    0x18 => bytecode!(code, pc, wide_dload, index: u16),
+                    0x19 => bytecode!(code, pc, wide_aload, index: u16),
+                    0x36 => bytecode!(code, pc, wide_istore, index: u16),
+                    0x37 => bytecode!(code, pc, wide_lstore, index: u16),
+                    0x38 => bytecode!(code, pc, wide_fstore, index: u16),
+                    0x39 => bytecode!(code, pc, wide_dstore, index: u16),
+                    0x3a => bytecode!(code, pc, wide_astore, index: u16),
                     0x84 => {
-                        let mut offset: usize = 0;
-                        let index = fetch!(u16 code, offset);
-                        let constant = fetch!(u16 code, offset);
+                        let index = fetch!(u16 code, pc);
+                        let constant = fetch!(u16 code, pc);
                         DecodeResult {
                             bytecode: Bytecode::wide_iinc {
                                 index: index,
                                 constant: constant,
                             },
-                            consumed: offset,
+                            newpc: pc,
                         }
                     }
-                    0xa9 => bytecode!(code, wide_ret, index: u16),
-                    op @ _ => bytecode!(invalid, op),
-                };
-                // Add in the consumed opcode byte
-                result.consumed += 1;
-                result
-            }
+                    0xa9 => bytecode!(code, pc, wide_ret, index: u16),
+                    op @ _ => bytecode!(invalid, op, pc),
+                }
+            },
             0xc5 => {
-                let mut offset: usize = 0;
-                let index = fetch!(u16 code, offset);
-                let dimensions = fetch!(u8 code, offset);
+                let index = fetch!(u16 code, pc);
+                let dimensions = fetch!(u8 code, pc);
                 DecodeResult {
                     bytecode: Bytecode::multianewarray {
                         index: index,
                         dimensions: dimensions,
                     },
-                    consumed: offset,
+                    newpc: pc,
                 }
-            }
-            0xc6 => bytecode!(code, ifnull, branchoffset: u16),
-            0xc7 => bytecode!(code, ifnonnull, branchoffset: u16),
-            0xc8 => bytecode!(code, goto_w, branchoffset: u32),
-            0xc9 => bytecode!(code, jsr_w, branchoffset: u32),
-            op @ _ => bytecode!(invalid, op),
+            },
+            0xc6 => bytecode!(code, pc, ifnull, branchoffset: u16),
+            0xc7 => bytecode!(code, pc, ifnonnull, branchoffset: u16),
+            0xc8 => bytecode!(code, pc, goto_w, branchoffset: u32),
+            0xc9 => bytecode!(code, pc, jsr_w, branchoffset: u32),
+            op @ _ => bytecode!(invalid, op, pc),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Bytecode;
+
+    macro_rules! test_parameterized_bytecode {
+        ($opcode:expr => $bytecode:expr) => {{
+            let result = Bytecode::decode(&[$opcode], 0);
+            assert_eq!(1, result.newpc);
+            assert_eq!($bytecode, result.bytecode);
+        }}
+    }
+
+    #[test]
+    fn test_decode_iconst_i() {
+        test_parameterized_bytecode!(0x02 => Bytecode::iconst_i(-1));
+        test_parameterized_bytecode!(0x03 => Bytecode::iconst_i(0));
+        test_parameterized_bytecode!(0x04 => Bytecode::iconst_i(1));
+        test_parameterized_bytecode!(0x05 => Bytecode::iconst_i(2));
+        test_parameterized_bytecode!(0x06 => Bytecode::iconst_i(3));
+        test_parameterized_bytecode!(0x07 => Bytecode::iconst_i(4));
+        test_parameterized_bytecode!(0x08 => Bytecode::iconst_i(5));
+    }
+
+    #[test]
+    fn test_decode_lconst_l() {
+        test_parameterized_bytecode!(0x09 => Bytecode::lconst_l(0));
+        test_parameterized_bytecode!(0x0a => Bytecode::lconst_l(1));
+    }
+
+    #[test]
+    fn test_decode_fconst_f() {
+        test_parameterized_bytecode!(0x0b => Bytecode::fconst_f(0));
+        test_parameterized_bytecode!(0x0c => Bytecode::fconst_f(1));
+        test_parameterized_bytecode!(0x0d => Bytecode::fconst_f(2));
+    }
+
+    #[test]
+    fn test_decode_dconst_d() {
+        test_parameterized_bytecode!(0x0e => Bytecode::dconst_d(0));
+        test_parameterized_bytecode!(0x0f => Bytecode::dconst_d(1));
+    }
+
+    #[test]
+    fn test_decode_iload_n() {
+        test_parameterized_bytecode!(0x1a => Bytecode::iload_n(0));
+        test_parameterized_bytecode!(0x1b => Bytecode::iload_n(1));
+        test_parameterized_bytecode!(0x1c => Bytecode::iload_n(2));
+        test_parameterized_bytecode!(0x1d => Bytecode::iload_n(3));
+    }
+
+    #[test]
+    fn test_decode_lload_n() {
+        test_parameterized_bytecode!(0x1e => Bytecode::lload_n(0));
+        test_parameterized_bytecode!(0x1f => Bytecode::lload_n(1));
+        test_parameterized_bytecode!(0x20 => Bytecode::lload_n(2));
+        test_parameterized_bytecode!(0x21 => Bytecode::lload_n(3));
+    }
+
+    #[test]
+    fn test_decode_fload_n() {
+        test_parameterized_bytecode!(0x22 => Bytecode::fload_n(0));
+        test_parameterized_bytecode!(0x23 => Bytecode::fload_n(1));
+        test_parameterized_bytecode!(0x24 => Bytecode::fload_n(2));
+        test_parameterized_bytecode!(0x25 => Bytecode::fload_n(3));
+    }
+
+    #[test]
+    fn test_decode_dload_n() {
+        test_parameterized_bytecode!(0x26 => Bytecode::dload_n(0));
+        test_parameterized_bytecode!(0x27 => Bytecode::dload_n(1));
+        test_parameterized_bytecode!(0x28 => Bytecode::dload_n(2));
+        test_parameterized_bytecode!(0x29 => Bytecode::dload_n(3));
+    }
+
+    #[test]
+    fn test_decode_aload_n() {
+        test_parameterized_bytecode!(0x2a => Bytecode::aload_n(0));
+        test_parameterized_bytecode!(0x2b => Bytecode::aload_n(1));
+        test_parameterized_bytecode!(0x2c => Bytecode::aload_n(2));
+        test_parameterized_bytecode!(0x2d => Bytecode::aload_n(3));
+    }
+
+    #[test]
+    fn test_decode_istore_n() {
+        test_parameterized_bytecode!(0x3b => Bytecode::istore_n(0));
+        test_parameterized_bytecode!(0x3c => Bytecode::istore_n(1));
+        test_parameterized_bytecode!(0x3d => Bytecode::istore_n(2));
+        test_parameterized_bytecode!(0x3e => Bytecode::istore_n(3));
+    }
+
+    #[test]
+    fn test_decode_lstore_n() {
+        test_parameterized_bytecode!(0x3f => Bytecode::lstore_n(0));
+        test_parameterized_bytecode!(0x40 => Bytecode::lstore_n(1));
+        test_parameterized_bytecode!(0x41 => Bytecode::lstore_n(2));
+        test_parameterized_bytecode!(0x42 => Bytecode::lstore_n(3));
+    }
+
+    #[test]
+    fn test_decode_fstore_n() {
+        test_parameterized_bytecode!(0x43 => Bytecode::fstore_n(0));
+        test_parameterized_bytecode!(0x44 => Bytecode::fstore_n(1));
+        test_parameterized_bytecode!(0x45 => Bytecode::fstore_n(2));
+        test_parameterized_bytecode!(0x46 => Bytecode::fstore_n(3));
+    }
+
+    #[test]
+    fn test_decode_dstore_n() {
+        test_parameterized_bytecode!(0x47 => Bytecode::dstore_n(0));
+        test_parameterized_bytecode!(0x48 => Bytecode::dstore_n(1));
+        test_parameterized_bytecode!(0x49 => Bytecode::dstore_n(2));
+        test_parameterized_bytecode!(0x4a => Bytecode::dstore_n(3));
+    }
+
+    #[test]
+    fn test_decode_astore_n() {
+        test_parameterized_bytecode!(0x4b => Bytecode::astore_n(0));
+        test_parameterized_bytecode!(0x4c => Bytecode::astore_n(1));
+        test_parameterized_bytecode!(0x4d => Bytecode::astore_n(2));
+        test_parameterized_bytecode!(0x4e => Bytecode::astore_n(3));
+    }
+
+    #[test]
+    fn test_decode_tableswitch() {
+        // Given
+        let (pc, code) = (0, vec![
+            0xaa, // tableswitch
+            0, 0, 0, // 0 pad bytes
+            0xaa, 0xbb, 0xcc, 0xdd, // default   = -1430532899
+            0x00, 0x00, 0x00, 0x00, // low       = 0x00000000
+            0x00, 0x00, 0x00, 0x02, // high      = 0x00000002
+            0xff, 0xff, 0xff, 0xff, // offset[0] = -1
+            0x07, 0x5b, 0xcd, 0x15, // offset[1] = 123456789
+            0x00, 0x00, 0x00, 0x00, // offset[2] = 0
+        ]);
+
+        // When
+        let result = Bytecode::decode(&code, pc);
+
+        // Then
+        let expected = Bytecode::tableswitch {
+            default: -1430532899,
+            low: 0,
+            high: 2,
+            offsets: vec![-1, 123456789, 0],
+        };
+        assert_eq!(expected, result.bytecode);
+        assert_eq!(code.len(), result.newpc);
+    }
+
+    #[test]
+    fn test_decode_tableswitch_with_offset() {
+        // Given
+        let (pc, code) = (3, vec![
+            0x00, 0x00, 0x00,       // skip bytes
+            0xaa,                   // tableswitch
+            // No pad bytes, requires inital PC of 3
+            0xaa, 0xbb, 0xcc, 0xdd, // default   = -1430532899
+            0x00, 0x00, 0x00, 0x00, // low       = 0x00000000
+            0x00, 0x00, 0x00, 0x02, // high      = 0x00000002
+            0xff, 0xff, 0xff, 0xff, // offset[0] = -1
+            0x07, 0x5b, 0xcd, 0x15, // offset[1] = 123456789
+            0x00, 0x00, 0x00, 0x00, // offset[2] = 0
+        ]);
+
+        // When
+        let result = Bytecode::decode(&code, pc);
+
+        // Then
+        let expected = Bytecode::tableswitch {
+            default: -1430532899,
+            low: 0,
+            high: 2,
+            offsets: vec![-1, 123456789, 0],
+        };
+        assert_eq!(expected, result.bytecode);
+        assert_eq!(code.len(), result.newpc);
+    }
+
+    #[test]
+    fn test_decode_lookupswitch() {
+        // Given
+        let (pc, code) = (0, vec![
+            0xab, // tableswitch
+            0, 0, 0, // 0 pad bytes
+            0xaa, 0xbb, 0xcc, 0xdd, // default    = -1430532899
+            0x00, 0x00, 0x00, 0x02, // npairs     = 0x00000002
+            0xff, 0xff, 0xff, 0xff, // pairs[0].0 = -1
+            0xff, 0xff, 0xff, 0xff, // pairs[0].1 = -1
+            0x00, 0x00, 0x00, 0xff, // pairs[1].0 = 0xff
+            0x00, 0x00, 0x00, 0xff, // pairs[1].1 = 0xff
+        ]);
+
+        // When
+        let result = Bytecode::decode(&code, pc);
+
+        // Then
+        let expected = Bytecode::lookupswitch {
+            default: -1430532899,
+            npairs: 2,
+            pairs: vec![(-1, -1), (0xff, 0xff)], 
+        };
+        assert_eq!(expected, result.bytecode);
+        assert_eq!(pc + code.len(), result.newpc);
+    }
+
+    #[test]
+    fn test_decode_lookupswitch_with_offset() {
+        // Given
+        let (pc, code) = (2, vec![
+            0x00, 0x00,             // skip bytes
+            0xab,                   // lookupswitch
+            0,                      // 0 pad bytes (pc must be 2)
+            0xaa, 0xbb, 0xcc, 0xdd, // default    = -1430532899
+            0x00, 0x00, 0x00, 0x02, // npairs     = 0x00000002
+            0xff, 0xff, 0xff, 0xff, // pairs[0].0 = -1
+            0xff, 0xff, 0xff, 0xff, // pairs[0].1 = -1
+            0x00, 0x00, 0x00, 0xff, // pairs[1].0 = 0xff
+            0x00, 0x00, 0x00, 0xff, // pairs[1].1 = 0xff
+        ]);
+
+        // When
+        let result = Bytecode::decode(&code, pc);
+
+        // Then
+        let expected = Bytecode::lookupswitch {
+            default: -1430532899,
+            npairs: 2,
+            pairs: vec![(-1, -1), (0xff, 0xff)], 
+        };
+        assert_eq!(expected, result.bytecode);
+        assert_eq!(code.len(), result.newpc);
+    }
+
+    #[test]
+    fn test_decode_invokeinterface_skips_pad_byte() {
+        // Given
+        let (pc, code) = (0, vec![
+            0xb9,       // invokeinterface
+            0x0f, 0xff, // index = 4095,
+            0xff,       // count = 255,
+            0xff,       // unused
+            0xac,       // ireturn
+        ]);
+
+        // When
+        let result = Bytecode::decode(&code, pc);
+
+        // Then
+        let expected = Bytecode::invokeinterface {
+            index: 4095,
+            count: 255,
+        };
+        assert_eq!(expected, result.bytecode);
+        assert_eq!(pc + code.len() - 1, result.newpc);
+
+        // When - next bytecode
+        let result = Bytecode::decode(&code, result.newpc);
+
+        // Then
+        let expected = Bytecode::ireturn;
+        assert_eq!(expected, result.bytecode);
+        assert_eq!(pc + code.len(), result.newpc);
+    }
+
+    #[test]
+    fn test_decode_invokedynamic_skips_pad_bytes() {
+        // Given
+        let (pc, code) = (0, vec![
+            0xba,       // invokedynamic
+            0x0f, 0xff, // index = 4095,
+            0xff, 0xff, // unused
+            0xbf,       // athrow
+        ]);
+
+        // When
+        let result = Bytecode::decode(&code, pc);
+
+        // Then
+        let expected = Bytecode::invokedynamic {
+            index: 4095,
+        };
+        assert_eq!(expected, result.bytecode);
+        assert_eq!(pc + code.len() - 1, result.newpc);
+
+        // When - next bytecode
+        let result = Bytecode::decode(&code, result.newpc);
+
+        // Then
+        let expected = Bytecode::athrow;
+        assert_eq!(expected, result.bytecode);
+        assert_eq!(pc + code.len(), result.newpc);
     }
 }
