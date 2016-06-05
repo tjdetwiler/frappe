@@ -189,7 +189,7 @@ pub enum Bytecode {
     ishl,
     ishr,
     istore {
-        index: u8
+        index: u8,
     },
     /// 0 <= n <= 3
     istore_n(u8),
@@ -240,7 +240,7 @@ pub enum Bytecode {
     lshl,
     lshr,
     lstore {
-        index: u8
+        index: u8,
     },
     /// 0 <= n <= 3
     lstore_n(u8),
@@ -687,7 +687,7 @@ impl Bytecode {
                     0xa9 => bytecode!(code, pc, wide_ret, index: u16),
                     op @ _ => bytecode!(invalid, op, pc),
                 }
-            },
+            }
             0xc5 => {
                 let index = fetch!(u16 code, pc);
                 let dimensions = fetch!(u8 code, pc);
@@ -698,7 +698,7 @@ impl Bytecode {
                     },
                     newpc: pc,
                 }
-            },
+            }
             0xc6 => bytecode!(code, pc, ifnull, branchoffset: u16),
             0xc7 => bytecode!(code, pc, ifnonnull, branchoffset: u16),
             0xc8 => bytecode!(code, pc, goto_w, branchoffset: u32),
@@ -833,7 +833,8 @@ mod tests {
     #[test]
     fn test_decode_tableswitch() {
         // Given
-        let (pc, code) = (0, vec![
+        let (pc, code) = (0,
+                          vec![
             0xaa, // tableswitch
             0, 0, 0, // 0 pad bytes
             0xaa, 0xbb, 0xcc, 0xdd, // default   = -1430532899
@@ -861,7 +862,8 @@ mod tests {
     #[test]
     fn test_decode_tableswitch_with_offset() {
         // Given
-        let (pc, code) = (3, vec![
+        let (pc, code) = (3,
+                          vec![
             0x00, 0x00, 0x00,       // skip bytes
             0xaa,                   // tableswitch
             // No pad bytes, requires inital PC of 3
@@ -890,7 +892,8 @@ mod tests {
     #[test]
     fn test_decode_lookupswitch() {
         // Given
-        let (pc, code) = (0, vec![
+        let (pc, code) = (0,
+                          vec![
             0xab, // tableswitch
             0, 0, 0, // 0 pad bytes
             0xaa, 0xbb, 0xcc, 0xdd, // default    = -1430532899
@@ -908,7 +911,7 @@ mod tests {
         let expected = Bytecode::lookupswitch {
             default: -1430532899,
             npairs: 2,
-            pairs: vec![(-1, -1), (0xff, 0xff)], 
+            pairs: vec![(-1, -1), (0xff, 0xff)],
         };
         assert_eq!(expected, result.bytecode);
         assert_eq!(pc + code.len(), result.newpc);
@@ -917,7 +920,8 @@ mod tests {
     #[test]
     fn test_decode_lookupswitch_with_offset() {
         // Given
-        let (pc, code) = (2, vec![
+        let (pc, code) = (2,
+                          vec![
             0x00, 0x00,             // skip bytes
             0xab,                   // lookupswitch
             0,                      // 0 pad bytes (pc must be 2)
@@ -936,7 +940,7 @@ mod tests {
         let expected = Bytecode::lookupswitch {
             default: -1430532899,
             npairs: 2,
-            pairs: vec![(-1, -1), (0xff, 0xff)], 
+            pairs: vec![(-1, -1), (0xff, 0xff)],
         };
         assert_eq!(expected, result.bytecode);
         assert_eq!(code.len(), result.newpc);
@@ -945,7 +949,8 @@ mod tests {
     #[test]
     fn test_decode_invokeinterface_skips_pad_byte() {
         // Given
-        let (pc, code) = (0, vec![
+        let (pc, code) = (0,
+                          vec![
             0xb9,       // invokeinterface
             0x0f, 0xff, // index = 4095,
             0xff,       // count = 255,
@@ -976,7 +981,8 @@ mod tests {
     #[test]
     fn test_decode_invokedynamic_skips_pad_bytes() {
         // Given
-        let (pc, code) = (0, vec![
+        let (pc, code) = (0,
+                          vec![
             0xba,       // invokedynamic
             0x0f, 0xff, // index = 4095,
             0xff, 0xff, // unused
@@ -987,9 +993,7 @@ mod tests {
         let result = Bytecode::decode(&code, pc);
 
         // Then
-        let expected = Bytecode::invokedynamic {
-            index: 4095,
-        };
+        let expected = Bytecode::invokedynamic { index: 4095 };
         assert_eq!(expected, result.bytecode);
         assert_eq!(pc + code.len() - 1, result.newpc);
 

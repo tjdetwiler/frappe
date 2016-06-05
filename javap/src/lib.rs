@@ -11,15 +11,11 @@ pub struct Formatter {
 
 impl Formatter {
     pub fn new() -> Formatter {
-        Formatter {
-            out: Box::new(io::stdout()),
-        }
+        Formatter { out: Box::new(io::stdout()) }
     }
 
     pub fn with_output<W: 'static + io::Write>(write: W) -> Formatter {
-        Formatter {
-            out: Box::new(write),
-        }
+        Formatter { out: Box::new(write) }
     }
 }
 
@@ -187,10 +183,7 @@ impl Disassemble for Constant {
             _ => {}
         }
         let comment_string = comment_string.map_or(String::new(), |s| format!("// {}", s));
-        let line = format!("{:<19}{:<15}{}",
-                    tag_string,
-                    arg_string,
-                    comment_string);
+        let line = format!("{:<19}{:<15}{}", tag_string, arg_string, comment_string);
         try!(write!(fmt.out, "{}", line.trim()));
         Ok(())
     }
@@ -431,25 +424,25 @@ fn constant_arg_detail(index: u16, opts: &Options) -> Option<String> {
         Constant::Class(name_index) => {
             let name = cp[name_index].as_utf8();
             Some(format!("class {}", name))
-        },
+        }
         Constant::String(string_index) => {
             let name = cp[string_index].as_utf8();
             Some(format!("String {}", name))
-        },
+        }
         Constant::Fieldref(ref entity) => {
             let entity_info = cp[entity.name_and_type_index].as_name_and_type();
             let field_name = cp[entity_info.name_index].as_utf8();
             let field_type = cp[entity_info.descriptor_index].as_utf8();
             Some(format!("Field {}:{}", field_name, field_type))
-        },
+        }
         Constant::Methodref(ref entity) => {
             let detail = generate_typed_entity_comment_string(cp, entity);
             Some(format!("Method {}", detail))
-        },
+        }
         Constant::InterfaceMethodref(ref entity) => {
             let detail = generate_typed_entity_comment_string(cp, entity);
             Some(format!("InterfaceMethod {}", detail))
-        },
+        }
         Constant::InvokeDynamic { bootstrap_method_attr_index, name_and_type_index } => {
             let entity_info = cp[name_and_type_index].as_name_and_type();
             let method_name = cp[entity_info.name_index].as_utf8();
@@ -462,7 +455,7 @@ fn constant_arg_detail(index: u16, opts: &Options) -> Option<String> {
                          bootstrap_method_attr_index,
                          method_name,
                          method_type))
-        },
+        }
         ref constant @ _ => panic!(format!("Unimplemented constant {:#?}", constant)),
     }
 }
@@ -495,7 +488,7 @@ impl Disassemble for Bytecode {
             Bytecode::sipush { short } => simple_arg("sipush", short),
             Bytecode::ldc { index } => constant_arg("ldc", index as u16, opts),
             Bytecode::ldc_w { index } => constant_arg("ldc_w", index, opts),
-            Bytecode::ldc2_w { index  }=> constant_arg("ldc2_w", index, opts),
+            Bytecode::ldc2_w { index } => constant_arg("ldc2_w", index, opts),
             Bytecode::iload { index } => simple_arg("iload", index),
             Bytecode::lload { index } => simple_arg("lload", index),
             Bytecode::fload { index } => simple_arg("fload", index),
@@ -642,14 +635,14 @@ impl Disassemble for Bytecode {
                     arg: Some(format!("#{}, {}", index, count)),
                     detail: constant_arg_detail(index, opts),
                 }
-            },
+            }
             Bytecode::invokedynamic { index } => {
                 BytecodeFormat {
                     op: "invokedynamic".into(),
                     arg: Some(format!("#{},  {}", index, 0)),
                     detail: constant_arg_detail(index, opts),
                 }
-            },
+            }
             Bytecode::new { index } => constant_arg("new", index, opts),
             Bytecode::newarray { atype } => simple_arg("newarray", atype),
             Bytecode::anewarray { index } => constant_arg("anewarray", index, opts),
