@@ -1041,4 +1041,57 @@ mod tests {
         assert_eq!(expected, result.bytecode);
         assert_eq!(pc + code.len(), result.newpc);
     }
+
+    macro_rules! test_wide_opcode {
+        ($testname:ident: $opcode:expr => $opname:ident) => (
+            #[test]
+            fn $testname() {
+                // Given
+                let code = vec![
+                    0xc4,       // wide
+                    $opcode,    // opcode
+                    0x12, 0x34  // index
+                ];
+
+                // When
+                let result = Bytecode::decode(&code, 0);
+
+                // Then
+                let expected = Bytecode::$opname { index: 0x1234 };
+                assert_eq!(expected, result.bytecode);
+                assert_eq!(code.len(), result.newpc);
+            }
+        )
+    }
+
+    test_wide_opcode!(test_decode_wide_iload: 0x15 => wide_iload);
+    test_wide_opcode!(test_decode_wide_lload: 0x16 => wide_lload);
+    test_wide_opcode!(test_decode_wide_fload: 0x17 => wide_fload);
+    test_wide_opcode!(test_decode_wide_dload: 0x18 => wide_dload);
+    test_wide_opcode!(test_decode_wide_aload: 0x19 => wide_aload);
+    test_wide_opcode!(test_decode_wide_istore: 0x36 => wide_istore);
+    test_wide_opcode!(test_decode_wide_lstore: 0x37 => wide_lstore);
+    test_wide_opcode!(test_decode_wide_fstore: 0x38 => wide_fstore);
+    test_wide_opcode!(test_decode_wide_dstore: 0x39 => wide_dstore);
+    test_wide_opcode!(test_decode_wide_astore: 0x3a => wide_astore);
+    test_wide_opcode!(test_decode_wide_ret: 0xa9 => wide_ret);
+
+    #[test]
+    fn test_decode_wide_iinc() {
+        // Given
+        let code = vec![
+            0xc4,       // wide
+            0x84,       // iinc
+            0x12, 0x34, // index
+            0x34, 0x56, // const
+        ];
+
+        // When
+        let result = Bytecode::decode(&code, 0);
+
+        // Then
+        let expected = Bytecode::wide_iinc{ index: 0x1234, constant: 0x3456 };
+        assert_eq!(expected, result.bytecode);
+        assert_eq!(code.len(), result.newpc);
+    }
 }
