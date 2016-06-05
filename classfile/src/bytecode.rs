@@ -1,3 +1,30 @@
+/// A single JVM bytecode.
+///
+/// While most opcodes map 1:1 into this enum, some instructions
+/// are represented by a single entry.
+///
+/// Ex:
+/// Instead of
+///
+/// ```no_run
+/// enum Bytecode {
+///     iconst_m1,
+///     iconst_0,
+///     iconst_1,
+///     iconst_2,
+///     iconst_3,
+///     iconst_4,
+///     iconst_5,
+/// }
+/// ```
+///
+/// We instead use
+///
+/// ```rust
+/// enum Bytecode {
+///     iconst_i(i8)
+/// }
+/// ```
 #[allow(non_camel_case_types)]
 #[derive(Debug, Eq, PartialEq)]
 pub enum Bytecode {
@@ -355,7 +382,6 @@ macro_rules! fetch {
 }
 
 /// Computes the number of pad bytes to align a given index to an alignment.
-#[macro_export]
 macro_rules! pad_align {
     ($value:expr, 4) => {
         (4 - ($value & 3)) & 3
@@ -414,23 +440,33 @@ macro_rules! bytecode {
     }};
 }
 
+/// The result of a bytecode decode operation.
 #[derive(Debug)]
 pub struct DecodeResult {
+    /// The decoded bytecode value.
     pub bytecode: Bytecode,
+    /// The index of the next instruction after this one. In this context,
+    /// 'next' refers to the ajacent instruction in the code stream (ex:
+    /// result.newpc = oldpc + sizeof(result.bytecode)).
     pub newpc: usize,
 }
 
 impl Bytecode {
     /// Decodes a single instruction from the code slice.
     ///
-    /// Returns the decoded bytecode and how many bytes from the instruction
-    /// stream were consumed by this decoded instruction.
+    /// Returns the decoded bytecode and the new pc that is the index of
+    /// the start of the next instruction in the stream.
     ///
     /// # Examples
     /// ```rust
-    /// let mut pc = 0;
+    /// use classfile::Bytecode;
+    ///
     /// let code: Vec<u8> = vec![];
+    /// let mut pc = 0;
     /// while pc < code.len() {
+    ///     let decode_result = Bytecode::decode(&code, pc);
+    ///     println!("Decoded {:?}", decode_result.bytecode);
+    ///     pc = decode_result.newpc;
     /// }
     /// ```
     pub fn decode(code: &[u8], mut pc: usize) -> DecodeResult {
