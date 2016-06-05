@@ -137,6 +137,10 @@ impl Disassemble for Constant {
                 tag_string = "NameAndType";
                 arg_string = format!("#{}:#{}", name_index, descriptor_index);
                 let method_name = opts.constants[name_index].as_utf8();
+                let method_name = match method_name.as_ref() {
+                    "<init>" | "<clinit" => format!("\"{}\"", method_name),
+                    _ => format!("{}", method_name),
+                };
                 let method_type = opts.constants[descriptor_index].as_utf8();
                 comment_string = Some(format!("{}:{}", method_name, method_type));
             }
@@ -183,11 +187,11 @@ impl Disassemble for Constant {
             _ => {}
         }
         let comment_string = comment_string.map_or(String::new(), |s| format!("// {}", s));
-        try!(write!(fmt.out,
-                    "{:<19}{:<15}{}",
+        let line = format!("{:<19}{:<15}{}",
                     tag_string,
                     arg_string,
-                    comment_string));
+                    comment_string);
+        try!(write!(fmt.out, "{}", line.trim()));
         Ok(())
     }
 }
@@ -250,11 +254,26 @@ impl Disassemble for AttributeInfo {
                 try!(write!(fmt.out, "\n"));
             }
             AttributeInfo::Code(ref code) => {
+                try!(write!(fmt.out, "    Code:\n"));
                 try!(code.pretty_print(fmt, opts));
+            }
+            AttributeInfo::LineNumberTable(ref table) => {
+                try!(write!(fmt.out, "      LineNumberTable:\n"));
+                try!(table.pretty_print(fmt, opts));
             }
             _ => {
                 try!(write!(fmt.out, "Other"));
             }
+        }
+        Ok(())
+    }
+}
+
+impl Disassemble for Vec<LineNumberTableEntry> {
+    fn pretty_print(&self, fmt: &mut Formatter, _: &Options) -> io::Result<()> {
+        for entry in self.iter() {
+            let line_number = format!("        line {}", entry.line_number);
+            try!(write!(fmt.out, "{}: {}\n", line_number, entry.start_pc));
         }
         Ok(())
     }
@@ -283,12 +302,57 @@ impl Disassemble for MethodInfo {
         let method_descriptor = opts.constants[self.descriptor_index].as_utf8();
         if opts.verbose {
             try!(write!(fmt.out, "    descriptor: {}\n", method_descriptor));
-            try!(write!(fmt.out, "    flags: {:?}\n", self.access_flags));
+            try!(write!(fmt.out, "    flags: "));
+            try!(self.access_flags.pretty_print(fmt, opts));
+            try!(write!(fmt.out, "\n"));
             for attr in self.attrs.iter() {
                 try!(attr.pretty_print(fmt, opts));
             }
         }
         Ok(())
+    }
+}
+
+impl Disassemble for MethodAccessFlags {
+    fn pretty_print(&self, fmt: &mut Formatter, _: &Options) -> io::Result<()> {
+        let mut flags: Vec<&str> = vec![];
+        if self.is_public() {
+            flags.push("ACC_PUBLIC");
+        }
+        if self.is_private() {
+            flags.push("ACC_PRIVATE");
+        }
+        if self.is_protected() {
+            flags.push("ACC_PROTECTED");
+        }
+        if self.is_static() {
+            flags.push("ACC_STATIC");
+        }
+        if self.is_final() {
+            flags.push("ACC_FINAL");
+        }
+        if self.is_synchronized() {
+            flags.push("ACC_SYNCHRONIZED");
+        }
+        if self.is_bridge() {
+            flags.push("ACC_BRIDGE");
+        }
+        if self.is_varargs() {
+            flags.push("ACC_VARARGS");
+        }
+        if self.is_native() {
+            flags.push("ACC_NATIVE");
+        }
+        if self.is_abstract() {
+            flags.push("ACC_ABSTRACT");
+        }
+        if self.is_strict() {
+            flags.push("ACC_STRICT");
+        }
+        if self.is_synthetic() {
+            flags.push("ACC_SYNTHETIC");
+        }
+        write!(fmt.out, "{}", flags.join(", "))
     }
 }
 
@@ -320,10 +384,13 @@ impl Disassemble for CodeAttribute {
         let mut pc: usize = 0;
         while pc < length {
             let result = Bytecode::decode(&self.code, pc);
-            try!(write!(fmt.out, "{:>8}: ", pc));
+            try!(write!(fmt.out, "{:>10}: ", pc));
             try!(result.bytecode.pretty_print(fmt, opts));
             try!(write!(fmt.out, "\n"));
             pc = result.newpc;
+        }
+        for attr in self.attrs.iter() {
+            try!(attr.pretty_print(fmt, opts));
         }
         Ok(())
     }
@@ -370,8 +437,10 @@ fn constant_arg_detail(index: u16, opts: &Options) -> Option<String> {
             Some(format!("String {}", name))
         },
         Constant::Fieldref(ref entity) => {
-            let detail = generate_typed_entity_comment_string(cp, entity);
-            Some(format!("Field {}", detail))
+            let entity_info = cp[entity.name_and_type_index].as_name_and_type();
+            let field_name = cp[entity_info.name_index].as_utf8();
+            let field_type = cp[entity_info.descriptor_index].as_utf8();
+            Some(format!("Field {}:{}", field_name, field_type))
         },
         Constant::Methodref(ref entity) => {
             let detail = generate_typed_entity_comment_string(cp, entity);
@@ -611,7 +680,8 @@ impl Disassemble for Bytecode {
         };
         let arg_string = format.arg.unwrap_or(String::new());
         let comment_string = format.detail.map_or(String::new(), |s| format!("// {}", s));
-        try!(write!(fmt.out, "{:<14}{:<20}{}", format.op, arg_string, comment_string));
+        let line = format!("{:<14}{:<20}{}", format.op, arg_string, comment_string);
+        try!(write!(fmt.out, "{}", line.trim()));
         Ok(())
     }
 }
