@@ -254,6 +254,27 @@ impl Disassemble for AttributeInfo {
                 try!(write!(fmt.out, "      LineNumberTable:\n"));
                 try!(table.pretty_print(fmt, opts));
             }
+            AttributeInfo::LocalVariableTable(ref table) => {
+                try!(write!(fmt.out, "      LocalVariableTable:\n"));
+                try!(write!(fmt.out,
+                            "       {:>7}{:>8} {:>5}{:>6}   {}\n",
+                            "Start",
+                            "Length",
+                            "Slot",
+                            "Name",
+                            "Signature"));
+                for entry in table.iter() {
+                    let name = opts.constants[entry.name_index].as_utf8();
+                    let descriptor = opts.constants[entry.descriptor_index].as_utf8();
+                    try!(write!(fmt.out,
+                                "       {:>7}{:>8} {:>5}{:>6}   {}\n",
+                                entry.start_pc,
+                                entry.length,
+                                entry.index,
+                                name,
+                                descriptor));
+                }
+            }
             _ => {
                 try!(write!(fmt.out, "Other"));
             }
