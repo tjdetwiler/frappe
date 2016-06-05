@@ -686,7 +686,13 @@ fn disassemble_bytecode(bytecode: &Bytecode, pc: usize, opts: &Options) -> Strin
         Bytecode::wide_astore { index } => simple_arg("wide_astore", index),
         Bytecode::wide_iinc { .. } => no_arg_bytecode!("wide_iinc"),
         Bytecode::wide_ret { .. } => no_arg_bytecode!("wide_ret"),
-        Bytecode::multianewarray { .. } => no_arg_bytecode!("multianewarray"),
+        Bytecode::multianewarray { index, dimensions } => {
+            BytecodeFormat {
+                op: "multianewarray".into(),
+                arg: Some(format!("#{},  {}", index, dimensions)),
+                detail: constant_arg_detail(index, opts),
+            }
+        }
         Bytecode::ifnull { branchoffset } => simple_arg("ifnull", pc + branchoffset as u32),
         Bytecode::ifnonnull { branchoffset } => simple_arg("ifnonnull", pc + branchoffset as u32),
         Bytecode::goto_w { .. } => no_arg_bytecode!("goto_w"),
