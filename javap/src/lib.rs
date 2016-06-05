@@ -6,35 +6,20 @@ use std::fmt::Display;
 use classfile::*;
 
 pub struct Formatter {
-    indent: usize,
     out: Box<io::Write>,
 }
 
 impl Formatter {
     pub fn new() -> Formatter {
         Formatter {
-            indent: 0,
             out: Box::new(io::stdout()),
         }
     }
 
-    pub fn indent(&mut self) {
-        self.indent = self.indent + 1
-    }
-
-    pub fn unindent(&mut self) {
-        if self.indent <= 0 {
-            panic!("Attempting to negatively indent");
+    pub fn with_output<W: 'static + io::Write>(write: W) -> Formatter {
+        Formatter {
+            out: Box::new(write),
         }
-        self.indent = self.indent - 1
-    }
-
-    pub fn println(&mut self, line: &str) -> io::Result<()> {
-        for _ in 0..self.indent {
-            try!(write!(self.out, "  "));
-        }
-        try!(write!(self.out, "{}", line));
-        Ok(())
     }
 }
 
