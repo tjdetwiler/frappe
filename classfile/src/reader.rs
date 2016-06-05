@@ -3,8 +3,7 @@ use std::mem::transmute;
 
 use byteorder::{BigEndian, ReadBytesExt};
 
-use classfile::*;
-use classfile::error::*;
+use super::*;
 
 const CONSTANT_UTF8: u8 = 1;
 const CONSTANT_INTEGER: u8 = 3;

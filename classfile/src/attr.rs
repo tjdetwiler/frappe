@@ -1,7 +1,7 @@
 use std::vec::Vec;
 use std::ops::Deref;
 
-use classfile::ConstantPool;
+use super::ConstantPool;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum TargetInfo {

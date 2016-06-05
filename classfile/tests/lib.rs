@@ -1,4 +1,4 @@
-extern crate frappe;
+extern crate classfile;
 
 mod hello_world;
 mod point;

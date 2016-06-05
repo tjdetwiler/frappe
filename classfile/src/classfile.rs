@@ -1,7 +1,7 @@
 use std::fmt;
 use std::vec::Vec;
 
-use classfile::{Attributes, ConstantPool, FieldInfo, MethodInfo};
+use super::{Attributes, ConstantPool, FieldInfo, MethodInfo};
 
 #[derive(Debug)]
 pub struct ClassFile {

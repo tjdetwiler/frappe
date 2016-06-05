@@ -1,0 +1,9 @@
+[package]
+name = "javap"
+version = "0.1.0"
+authors = ["Tim Detwiler <timdetwiler@gmail.com>"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+classfile = { path = "../classfile", version = "0.1" }
+env_logger = "0.3.3"

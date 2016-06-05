@@ -1,14 +1,14 @@
-extern crate frappe;
+extern crate classfile;
 
 use std::fs::File;
 
-use frappe::classfile::*;
-use frappe::classfile::reader::ClassReader;
+use classfile::*;
+use classfile::reader::ClassReader;
 
 #[test]
 fn should_load_point_class() {
     // Given
-    let mut file = File::open("test-classes/Point.class").unwrap();
+    let mut file = File::open("../test-classes/Point.class").unwrap();
 
     // When
     let class = ClassReader::new(&mut file).read_class().unwrap();

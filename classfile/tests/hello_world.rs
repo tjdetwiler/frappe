@@ -1,14 +1,14 @@
-extern crate frappe;
+extern crate classfile;
 
 use std::fs::File;
 
-use frappe::classfile::*;
-use frappe::classfile::reader::ClassReader;
+use classfile::*;
+use classfile::reader::ClassReader;
 
 #[test]
 fn test_load_hello_world_class() {
     // Given
-    let mut file = File::open("test-classes/HelloWorld.class").unwrap();
+    let mut file = File::open("../test-classes/HelloWorld.class").unwrap();
 
     // When
     let classfile = ClassReader::new(&mut file).read_class().unwrap();

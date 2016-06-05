@@ -1,13 +1,13 @@
-extern crate frappe;
+extern crate classfile;
+extern crate javap;
 #[macro_use]
-extern crate log;
 extern crate env_logger;
 
 use std::fs::File;
 use std::env;
 
-use frappe::classfile::reader::ClassReader;
-use frappe::javap::{Disassemble, Formatter, Options};
+use classfile::reader::ClassReader;
+use javap::{Disassemble, Formatter, Options};
 
 fn main() {
     env_logger::init().unwrap();

@@ -1,8 +1,9 @@
+extern crate classfile;
+
 use std::io;
 use std::fmt::Display;
 
 use classfile::*;
-use bytecode::*;
 
 pub struct Formatter {
     indent: usize,

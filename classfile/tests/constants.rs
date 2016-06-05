@@ -1,11 +1,11 @@
-extern crate frappe;
+extern crate classfile;
 
 use std::f32;
 use std::f64;
 use std::fs::File;
 
-use frappe::classfile::*;
-use frappe::classfile::reader::ClassReader;
+use classfile::*;
+use classfile::reader::ClassReader;
 
 macro_rules! assert_float_eq {
     ($epsilon:expr, $a:expr, $b:expr) => {{
@@ -16,7 +16,7 @@ macro_rules! assert_float_eq {
 #[test]
 fn should_constants_class() {
     // Given
-    let mut file = File::open("test-classes/Constants.class").unwrap();
+    let mut file = File::open("../test-classes/Constants.class").unwrap();
 
     // When
     let class = ClassReader::new(&mut file).read_class().unwrap();
